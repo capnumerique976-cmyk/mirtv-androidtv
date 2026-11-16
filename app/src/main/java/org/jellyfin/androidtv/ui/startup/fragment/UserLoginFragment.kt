@@ -107,7 +107,8 @@ class UserLoginFragment : Fragment() {
 		}
 
 		// Hide button for active fragment
-		binding.useCredentials.isVisible = T::class != UserLoginCredentialsFragment::class
+		// MirTV: connexion par Quick Connect seulement (le nom et le mot de passe restent cachés)
+		binding.useCredentials.isVisible = false
 		binding.useQuickconnect.isVisible = T::class != UserLoginQuickConnectFragment::class
 	}
 }

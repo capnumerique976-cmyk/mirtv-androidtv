@@ -36,14 +36,28 @@ fun SettingsAboutScreen(launchedFromLogin: Boolean = false) {
 		}
 
 		item {
-			val heading = "Jellyfin app version"
-			val caption = "jellyfin-androidtv ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}"
+			// MirTV: version MirTV
+			val heading = stringResource(R.string.apropos_version)
+			val caption = "MirTV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) ${BuildConfig.BUILD_TYPE}"
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_jellyfin), contentDescription = null) },
 				headingContent = { Text(heading) },
 				captionContent = { Text(caption) },
 				onClick = copyAction(ClipData.newPlainText(heading, caption)),
 				modifier = Modifier.focusKey("version")
+			)
+		}
+
+		// MirTV: mention de licence et adresse du code source (licence GPL)
+		item {
+			val heading = stringResource(R.string.apropos_licence)
+			val caption = stringResource(R.string.apropos_code_source) + " : " + BuildConfig.MIRTV_CODE_SOURCE
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_guide), contentDescription = null) },
+				headingContent = { Text(heading) },
+				captionContent = { Text(caption) },
+				onClick = copyAction(ClipData.newPlainText(heading, BuildConfig.MIRTV_CODE_SOURCE)),
+				modifier = Modifier.focusKey("mirtv_licence")
 			)
 		}
 

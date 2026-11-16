@@ -33,6 +33,7 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.databinding.ActivityStartupBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
+import org.jellyfin.androidtv.mirtv.MirtvServeur
 import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
@@ -131,7 +132,13 @@ class StartupActivity : FragmentActivity() {
 
 				val server = startupViewModel.getLastServer()
 				if (server != null) showServer(server.id)
-				else showServerSelection()
+				// MirTV: serveur préréglé, l'écran de choix du serveur n'est jamais montré
+				else lifecycleScope.launch {
+					val id = MirtvServeur.assurer(startupViewModel::addServer) {
+						Toast.makeText(this@StartupActivity, R.string.mirtv_serveur_injoignable, Toast.LENGTH_LONG).show()
+					}
+					showServer(id)
+				}
 			}
 		}.launchIn(lifecycleScope)
 

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MirTV : textes propres à MirTV (français). Malgache : values-mg/strings_mirtv.xml (prompt 09). -->
+<resources>
+    <string name="mirtv_serveur_injoignable">Connexion à MirTV impossible pour l\'instant. Nouvel essai dans 10 secondes.</string>
+    <string name="apropos_version">Version de MirTV</string>
+    <string name="apropos_licence" translatable="false">Basé sur Jellyfin pour Android TV, logiciel libre sous licence GPL</string>
+    <string name="apropos_code_source">Code source</string>
+</resources>

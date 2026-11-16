@@ -14,6 +14,10 @@
         tools:ignore="LeanbackUsesWifi" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- MirTV: démarrage automatique de la box et ouverture par-dessus l'écran d'accueil -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <!-- Search permissions (voice to text) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
@@ -121,6 +125,17 @@
         <activity-alias
             android:name=".startup.StartupActivity"
             android:targetActivity=".ui.startup.StartupActivity" />
+
+        <!-- MirTV: ouvre MirTV au démarrage de la box -->
+        <receiver
+            android:name=".mirtv.DemarrageReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <!-- Main application -->
         <activity

@@ -149,6 +149,7 @@ class ServerFragment : Fragment() {
 			)
 		}
 
+		binding.serverButton.isVisible = false // MirTV: pas de changement de serveur
 		binding.serverButton.setOnClickListener {
 			navigateFragment<SelectServerFragment>(keepToolbar = true)
 		}
