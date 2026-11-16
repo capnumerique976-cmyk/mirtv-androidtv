@@ -5,6 +5,9 @@ plugins {
 	alias(libs.plugins.kotlin.serialization)
 }
 
+// MirTV: identifiant de l'appli MirTV (le code garde l'espace de noms org.jellyfin.androidtv)
+val MIRTV_APPLICATION_ID = "com.rahiss.mirtv"
+
 android {
 	namespace = "org.jellyfin.androidtv"
 	compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -14,9 +17,15 @@ android {
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
 
 		// Release version
-		applicationId = namespace
-		versionName = project.getVersionName()
-		versionCode = getVersionCode(versionName!!)
+		// MirTV: paquet com.rahiss.mirtv (s'installe à côté de l'appli officielle), version MirTV (voir mirtv/LISEZ-MOI.md)
+		applicationId = MIRTV_APPLICATION_ID
+		versionName = getProperty("mirtv.version.name") ?: project.getVersionName()
+		versionCode = getProperty("mirtv.version.code")?.toInt() ?: getVersionCode(versionName!!)
+
+		// MirTV: serveur préréglé et canal de mise à jour (stable : clients ; test : box de Ravi et de Web Agence)
+		buildConfigField("String", "MIRTV_SERVEUR", "\"https://mirtv.rahiss.com\"")
+		buildConfigField("String", "MIRTV_MISE_A_JOUR", "\"https://mirtv.rahiss.com/app/\"")
+		buildConfigField("String", "MIRTV_CODE_SOURCE", "\"https://github.com/capnumerique976-cmyk/mirtv-androidtv\"")
 	}
 
 	buildFeatures {
@@ -58,9 +67,10 @@ android {
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
 			// Set package names used in various XML files
-			resValue("string", "app_id", namespace!!)
-			resValue("string", "app_search_suggest_authority", "${namespace}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace}.content/intent")
+			// MirTV: identifiants MirTV (évite le conflit avec l'appli officielle installée sur la même box)
+			resValue("string", "app_id", MIRTV_APPLICATION_ID)
+			resValue("string", "app_search_suggest_authority", "${MIRTV_APPLICATION_ID}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${MIRTV_APPLICATION_ID}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_release")
@@ -75,9 +85,10 @@ android {
 			applicationIdSuffix = ".debug"
 
 			// Set package names used in various XML files
-			resValue("string", "app_id", namespace + applicationIdSuffix)
-			resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace + applicationIdSuffix}.content/intent")
+			// MirTV: identifiants MirTV
+			resValue("string", "app_id", MIRTV_APPLICATION_ID + applicationIdSuffix)
+			resValue("string", "app_search_suggest_authority", "${MIRTV_APPLICATION_ID + applicationIdSuffix}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${MIRTV_APPLICATION_ID + applicationIdSuffix}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "@string/app_name_debug")
@@ -97,7 +108,8 @@ android {
 	}
 }
 
-base.archivesName.set("jellyfin-androidtv-v${project.getVersionName()}")
+// MirTV: nom des fichiers APK
+base.archivesName.set("mirtv-${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}")
 
 tasks.register("versionTxt") {
 	val path = layout.buildDirectory.asFile.get().resolve("version.txt")

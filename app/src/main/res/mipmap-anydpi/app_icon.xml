@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MirTV : icône pour Android 6 à 7.1 (Android 8 et plus : mipmap-anydpi-v26/app_icon.xml, icône adaptative) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/app_icon_background" />
+    <item android:drawable="@drawable/app_icon_foreground" />
+</layer-list>
