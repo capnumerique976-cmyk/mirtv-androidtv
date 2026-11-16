@@ -11,7 +11,7 @@ object MirtvDestinations {
 	}
 
 	val accueil = fragmentDestination<AccueilFragment>()
-	var teleEnDirect = bientot(R.string.tuile_tele)
+	var teleEnDirect = fragmentDestination<TeleFragment>()
 	var reprendre = bientot(R.string.tuile_reprendre)
 	var films = bientot(R.string.tuile_films)
 	var favoris = bientot(R.string.tuile_favoris)

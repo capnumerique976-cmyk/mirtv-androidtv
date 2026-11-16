@@ -518,6 +518,20 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
                     }
                 }
 
+                // MirTV : flèches haut/bas = chaîne précédente/suivante (zapping) quand les commandes sont cachées
+                if (playbackControllerContainer.getValue().getPlaybackController().isLiveTv() && !mPopupPanelVisible && !mGuideVisible
+                        && !leanbackOverlayFragment.isControlsOverlayVisible()
+                        && (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_CHANNEL_UP || keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN)) {
+                    boolean haut = keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_CHANNEL_UP;
+                    BaseItemDto courante = playbackControllerContainer.getValue().getPlaybackController().getCurrentlyPlayingItem();
+                    BaseItemDto voisine = courante == null ? null : org.jellyfin.androidtv.mirtv.MirtvZapping.INSTANCE.voisine(courante.getId(), haut ? -1 : 1);
+                    if (voisine != null) {
+                        android.widget.Toast.makeText(requireContext(), voisine.getName(), android.widget.Toast.LENGTH_SHORT).show();
+                        switchChannel(voisine.getId());
+                        return true;
+                    }
+                }
+
                 if (playbackControllerContainer.getValue().getPlaybackController().isLiveTv() && !mPopupPanelVisible && !mGuideVisible && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                     if (!leanbackOverlayFragment.isControlsOverlayVisible()) {
                         leanbackOverlayFragment.setShouldShowOverlay(false);
