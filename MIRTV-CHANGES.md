@@ -12,11 +12,12 @@ qu'au minimum, chaque retouche de code est marquée `// MirTV:`. Les fonctions d
 | `app/src/main/res/drawable/app_logo.xml`, `app_banner_background.xml`, `app_banner_foreground.xml`, `app_icon_background.xml`, `app_icon_foreground.xml`, `app_icon_foreground_monochrome.xml`, `ic_jellyfin.xml` | dessins MirTV générés par `mirtv/outils/generer_logos.py` | aucun logo Jellyfin visible |
 | `app/src/main/res/mipmap-*/app_icon.png`, `app_banner.png` | supprimés, remplacés par `mipmap-anydpi/app_icon.xml` et `app_banner.xml` (vectoriels) | aucun logo Jellyfin visible |
 
-| `app/src/main/java/org/jellyfin/androidtv/ui/startup/StartupActivity.kt` | serveur MirTV ajouté tout seul au lieu de l'écran de choix du serveur ; planification et proposition des mises à jour ; lecture de la langue et du code d'activation envoyés par le script de préparation | serveur préréglé, mise à jour sans magasin |
+| `app/src/main/java/org/jellyfin/androidtv/ui/startup/StartupActivity.kt` | serveur MirTV ajouté tout seul au lieu de l'écran de choix du serveur ; « Qui regarde ? » (QuiRegardeFragment) à la place du choix d'utilisateur d'origine ; planification et proposition des mises à jour ; lecture de la langue et du code d'activation envoyés par le script de préparation | serveur préréglé, mise à jour sans magasin |
 | `app/src/main/java/org/jellyfin/androidtv/ui/startup/fragment/ServerFragment.kt` | bouton « changer de serveur » et mention du serveur cachés | un seul serveur ; aucun mot « Jellyfin » sur la box |
 | `app/src/main/java/org/jellyfin/androidtv/ui/startup/fragment/UserLoginFragment.kt` | bouton « nom et mot de passe » caché | connexion par Quick Connect |
 | `app/src/main/java/org/jellyfin/androidtv/ui/settings/screen/about/SettingsAboutScreen.kt` | version MirTV, mention de licence GPL, adresse du code source | licence GPL |
 | `app/src/main/java/org/jellyfin/androidtv/ui/shared/toolbar/MainToolbar.kt` | recherche cachée ; réglages visibles seulement en canal test | menus masqués (public qui ne lit pas) |
+| `app/src/main/java/org/jellyfin/androidtv/ui/navigation/Destinations.kt` | `home` pointe vers l'accueil MirTV | accueil à 5 tuiles |
 | `app/src/main/AndroidManifest.xml` | permissions démarrage, « afficher par-dessus », installation ; récepteurs MirTV (dont le récepteur d'administration de l'option « propriétaire de l'appareil ») | démarrage et mise à jour automatiques |
 
 Ajouts (pas de fichier d'origine touché) :
@@ -33,5 +34,8 @@ Ajouts (pas de fichier d'origine touché) :
 | `app/src/main/java/org/jellyfin/androidtv/mirtv/MiseAJour.kt` | mise à jour : version.json, SHA-256, certificat, PackageInstaller ; canal test/stable (`CanalReceiver`) |
 | `app/src/main/java/org/jellyfin/androidtv/mirtv/MirtvInterface.kt` | éléments d'interface cachés ou visibles |
 | `app/src/main/res/values/strings_mirtv.xml` | textes MirTV |
+| `app/src/main/java/org/jellyfin/androidtv/mirtv/ui/` | composants MirTV réutilisables (tuile, carte, barre du haut, aide aux touches, bandeau, pictogrammes, animaux), valeurs de la charte |
+| `app/src/main/java/org/jellyfin/androidtv/mirtv/ecrans/` | écrans MirTV : « Qui regarde ? », accueil à 5 tuiles, écran provisoire « Bientôt ici » |
+| `app/src/main/java/org/jellyfin/androidtv/mirtv/MirtvProfils.kt` | noms de profils (convention `f<numéro>-<prénom>`) |
 | `app/src/main/java/org/jellyfin/androidtv/mirtv/MirtvAdmin.kt`, `res/xml/mirtv_device_admin.xml` | récepteur d'administration (option « propriétaire de l'appareil », aucune politique) |
 | `app/src/main/java/org/jellyfin/androidtv/mirtv/MirtvReglages.kt` | langue et code d'activation envoyés par le script de préparation des box |

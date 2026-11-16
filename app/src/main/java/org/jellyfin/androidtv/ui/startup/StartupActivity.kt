@@ -34,6 +34,7 @@ import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.databinding.ActivityStartupBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
 import org.jellyfin.androidtv.mirtv.MirtvReglages
+import org.jellyfin.androidtv.mirtv.ecrans.QuiRegardeFragment
 import org.jellyfin.androidtv.mirtv.MirtvServeur
 import org.jellyfin.androidtv.mirtv.MiseAJour
 import org.jellyfin.androidtv.ui.background.AppBackground
@@ -212,10 +213,10 @@ class StartupActivity : FragmentActivity() {
 	}
 
 	private fun showServer(id: UUID) = supportFragmentManager.commit {
-		replace<StartupToolbarFragment>(R.id.content_view)
-		add<ServerFragment>(
+		// MirTV: « Qui regarde ? » remplace l'écran d'origine (barre d'outils et choix de l'utilisateur)
+		replace<QuiRegardeFragment>(
 			R.id.content_view, null, createBundle {
-				putString(ServerFragment.ARG_SERVER_ID, id.toString())
+				putString(QuiRegardeFragment.ARG_SERVER_ID, id.toString())
 			}
 		)
 	}

@@ -5,4 +5,24 @@
     <string name="apropos_version">Version de MirTV</string>
     <string name="apropos_licence" translatable="false">Basé sur Jellyfin pour Android TV, logiciel libre sous licence GPL</string>
     <string name="apropos_code_source">Code source</string>
+    <!-- Écrans MirTV (clés identiques à design/textes.csv du dépôt mirtv) -->
+    <string name="qui_regarde_titre">Qui regarde ?</string>
+    <string name="qui_regarde_attente">Un instant…</string>
+    <string name="pastille_enfants">Enfants</string>
+    <string name="profil_parent">Parents</string>
+    <string name="profil_description">Profil %1$s</string>
+    <string name="accueil_titre">Accueil</string>
+    <string name="tuile_tele">Télé en direct</string>
+    <string name="tuile_tele_sous_titre">Les chaînes, tout de suite</string>
+    <string name="tuile_reprendre">Reprendre</string>
+    <string name="tuile_films">Films et vidéos</string>
+    <string name="tuile_favoris">Mes favoris</string>
+    <string name="tuile_aide">Aide</string>
+    <string name="indice_fleches_choisir">Flèches : choisir</string>
+    <string name="indice_ok_ouvrir">OK : ouvrir</string>
+    <string name="indice_retour_accueil">Retour : accueil</string>
+    <string name="indice_retour">Retour : revenir</string>
+    <string name="bientot_ici">Bientôt ici</string>
+    <string name="bouton_retour">Retour</string>
+    <string name="enfants_titre">Que veux-tu regarder ?</string>
 </resources>

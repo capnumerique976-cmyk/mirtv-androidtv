@@ -32,4 +32,12 @@ object MirtvReglages {
 
 	fun codeActivation(context: Context): String? =
 		context.getSharedPreferences(FICHIER, Context.MODE_PRIVATE).getString("activation", null)
+
+	/** Dernier profil choisi : la sélection de « Qui regarde ? » démarre dessus, sans l'ouvrir tout seul. */
+	fun dernierProfil(context: Context): String? =
+		context.getSharedPreferences(FICHIER, Context.MODE_PRIVATE).getString("dernier_profil", null)
+
+	fun retenirProfil(context: Context, id: String) {
+		context.getSharedPreferences(FICHIER, Context.MODE_PRIVATE).edit().putString("dernier_profil", id).apply()
+	}
 }
