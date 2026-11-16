@@ -14,6 +14,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.flow.filterNotNull
+import org.jellyfin.androidtv.mirtv.MirtvInterface
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
@@ -142,7 +144,7 @@ private fun MainToolbar(
 						colors = if (activeButton == MainToolbarActiveButton.Home) activeButtonColors else ButtonDefaults.colors(),
 						content = { Text(stringResource(R.string.lbl_home)) }
 					)
-					Button(
+					if (MirtvInterface.RECHERCHE) Button( // MirTV: recherche cachée
 						onClick = {
 							if (activeButton != MainToolbarActiveButton.Search) {
 								navigationRepository.navigate(Destinations.search())
@@ -156,7 +158,7 @@ private fun MainToolbar(
 		},
 		end = {
 			ToolbarButtons {
-				IconButton(
+				if (MirtvInterface.reglagesVisibles(LocalContext.current)) IconButton( // MirTV: réglages cachés aux clients
 					onClick = { settingsViewModel.show() },
 				) {
 					Icon(
