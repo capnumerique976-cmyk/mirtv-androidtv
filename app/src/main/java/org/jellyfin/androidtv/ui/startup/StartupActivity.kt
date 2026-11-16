@@ -33,6 +33,7 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.databinding.ActivityStartupBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
+import org.jellyfin.androidtv.mirtv.MirtvReglages
 import org.jellyfin.androidtv.mirtv.MirtvServeur
 import org.jellyfin.androidtv.mirtv.MiseAJour
 import org.jellyfin.androidtv.ui.background.AppBackground
@@ -92,6 +93,7 @@ class StartupActivity : FragmentActivity() {
 		applyTheme()
 
 		super.onCreate(savedInstanceState)
+		MirtvReglages.lireIntent(this, intent) // MirTV: langue et code d'activation passés par le script de préparation
 
 		binding = ActivityStartupBinding.inflate(layoutInflater)
 		binding.background.setContent { AppBackground() }
@@ -225,6 +227,7 @@ class StartupActivity : FragmentActivity() {
 
 	override fun onNewIntent(intent: Intent) {
 		super.onNewIntent(intent)
+		MirtvReglages.lireIntent(this, intent) // MirTV
 		setIntent(intent)
 	}
 }
