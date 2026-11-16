@@ -17,6 +17,8 @@
     <!-- MirTV: démarrage automatique de la box et ouverture par-dessus l'écran d'accueil -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- MirTV: mise à jour de l'appli sans magasin d'applis -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Search permissions (voice to text) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -136,6 +138,21 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+
+        <!-- MirTV: canal de mise à jour (réglé par adb lors de la préparation de la box) -->
+        <receiver
+            android:name=".mirtv.CanalReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.rahiss.mirtv.CANAL" />
+            </intent-filter>
+        </receiver>
+
+        <!-- MirTV: résultat de l'installation d'une mise à jour -->
+        <receiver
+            android:name=".mirtv.MiseAJourReceiver"
+            android:exported="false" />
 
         <!-- Main application -->
         <activity

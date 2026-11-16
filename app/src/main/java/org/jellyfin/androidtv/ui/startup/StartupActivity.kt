@@ -34,6 +34,7 @@ import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.databinding.ActivityStartupBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
 import org.jellyfin.androidtv.mirtv.MirtvServeur
+import org.jellyfin.androidtv.mirtv.MiseAJour
 import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
@@ -107,6 +108,7 @@ class StartupActivity : FragmentActivity() {
 		super.onResume()
 
 		applyTheme()
+		MiseAJour.proposerSiPrete(this) // MirTV: installation proposée seulement au démarrage, jamais pendant une lecture
 	}
 
 	private fun onPermissionsGranted() = sessionRepository.state
@@ -159,6 +161,7 @@ class StartupActivity : FragmentActivity() {
 
 				// Recreate periodic workers
 				LeanbackChannelWorker.enqueue(workManager)
+				MiseAJour.planifier(workManager) // MirTV: vérification des mises à jour (démarrage puis toutes les 12 h)
 			}
 
 			// Update WebSockets
