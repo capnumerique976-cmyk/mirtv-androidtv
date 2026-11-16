@@ -132,6 +132,7 @@ class ServerFragment : Fragment() {
 
 	private fun onServerChange(server: Server) {
 		binding.loginDisclaimer.text = server.loginDisclaimer?.let { markdownRenderer.toMarkdownSpanned(it) }
+		binding.loginDisclaimer.isVisible = false // MirTV: la mention du serveur (qui cite Jellyfin) reste sur le site web, pas sur la box
 
 		binding.serverButton.apply {
 			state = ServerButtonView.State.EDIT
