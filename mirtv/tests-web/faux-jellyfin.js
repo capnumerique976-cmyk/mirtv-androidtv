@@ -46,6 +46,8 @@ function servirSource(p, res) {
   fs.createReadStream(f).pipe(res);
 }
 let qcPolls = 0;
+const abo = { statut: "actif", jours: 20 };
+const JETON_FAMILLE = "a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6";
 
 function json(res, code, obj) {
   res.writeHead(code, { "Content-Type": "application/json", "Date": new Date().toUTCString() });
@@ -89,7 +91,24 @@ const serveur = http.createServer((req, res) => {
       return fs.createReadStream(fichier).pipe(res);
     }
     if (p === "/__appels") return json(res, 200, appels);
-    if (p === "/__reset") { appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
+    // Faux portail des comptes (Paymenter) : état de l'abonnement de la famille 1, pause, code d'activation
+    if (p === "/__abo") { abo.statut = url.searchParams.get("statut") || "actif"; abo.jours = Number(url.searchParams.get("jours") || 20); return json(res, 200, abo); }
+    if (p.startsWith("/compte/")) {
+      const etat = { statut: abo.statut, fin: new Date(Date.now() + abo.jours * 86400000).toISOString(), formule: "Mois (TEST)", ecrans: 2, famille: 1,
+        payer: `http://${req.headers.host}/compte/payer/${JETON_FAMILLE}`, whatsapp: "261340000000" };
+      if (p === "/compte/mirtv/etat") {
+        const jeton = req.headers["x-mirtv-jeton"] || "";
+        return ["jeton-u-parent", "jeton-u-lea"].includes(jeton) && abo.statut === "actif" ? json(res, 200, { ...etat, jeton: JETON_FAMILLE }) : json(res, 404, { statut: "inconnu" });
+      }
+      if (p === "/compte/abonnement/" + JETON_FAMILLE) return json(res, 200, etat);
+      if (p === "/compte/mirtv/activer" && req.method === "POST") {
+        const code = String(JSON.parse(corps || "{}").code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (code !== "ABCD2345") return json(res, 404, { erreur: "code" });
+        return json(res, 200, { famille: 1, jeton: JETON_FAMILLE, profils: [{ id: "u-parent", nom: "f1-parent", jeton: "jeton-u-parent" }, { id: "u-lea", nom: "f1-lea", jeton: "jeton-u-lea" }] });
+      }
+      return json(res, 404, {});
+    }
+    if (p === "/__reset") { abo.statut = "actif"; abo.jours = 20; appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
 
     // Connexion
     if (p === "/QuickConnect/Enabled") return json(res, 200, true);
@@ -108,6 +127,8 @@ const serveur = http.createServer((req, res) => {
 
     const u = utilisateurDuJeton(req);
     if (!u) { res.writeHead(401); return res.end(); }
+    // Abonnement en pause : les profils de la famille 1 sont coupés
+    if (abo.statut !== "actif" && /^f1-/.test(u.Name)) { res.writeHead(401); return res.end("User account has been disabled."); }
     const enfant = !["f1-parent", "parent1"].includes(u.Name);
 
     let m;

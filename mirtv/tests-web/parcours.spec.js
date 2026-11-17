@@ -6,6 +6,7 @@ const MOTS_INTERDITS = /serveur|flux|stream|m3u|iptv|transcodage|session|bibliot
 
 async function neuf(page) {
   await page.request.get('/__reset');
+  await page.addInitScript(() => { window.MIRTV_URL_COMPTE = location.origin + '/compte'; }); // faux portail des comptes
   await page.goto('/tv/');
   await page.evaluate(() => localStorage.clear());
   await page.goto('/tv/');
@@ -397,4 +398,58 @@ test('chaîne sans image : dessin de sa catégorie, puis image gardée après l�
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-cle="c-c6"]')).toHaveClass(/avec-visuel/, { timeout: 5000 });
   await expect(page.locator('[data-cle="c-c6"] .visuel img')).toHaveAttribute('src', /^blob:/);
+});
+
+test('écran neuf : le code d’activation connecte toute la famille', async ({ page }) => {
+  await neuf(page);
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await page.getByRole('button', { name: 'J’ai un code d’activation'.replace(/’/g, "'") }).click();
+  await page.getByLabel('Code d’activation'.replace(/’/g, "'")).fill('abcd-0000');
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Ce code ne marche pas.', { exact: false })).toBeVisible();
+  await page.getByLabel('Code d’activation'.replace(/’/g, "'")).fill('abcd-2345');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Qui regarde ?' })).toBeVisible();
+  await expect(page.locator('.profil .prenom')).toHaveText(['Parent', 'Lea', 'Se connecter']);
+  await sansMotInterdit(page);
+});
+
+test('abonnement en pause : QR code et lien de paiement pour le parent, rien pour l’enfant', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mirtv.abonnements') || '{}').f1?.jeton)).toBeTruthy();
+  await page.request.get('/__abo?statut=en_pause');
+  await page.reload();
+  await expect(page.getByText('Votre abonnement est en pause.').first()).toBeVisible();
+  await expect(page.locator('.abo-qr svg')).toBeVisible();
+  await expect(page.locator('[data-cle="payer"]')).toHaveAttribute('href', /\/compte\/payer\/[a-f0-9]{32}$/);
+  await sansMotInterdit(page);
+  // L'enfant de la même famille : un écran calme, sans QR ni paiement
+  await page.evaluate(() => {
+    const l = JSON.parse(localStorage.getItem('mirtv.profils'));
+    l.push({ id: 'u-lea', nom: 'f1-lea', jeton: 'jeton-u-lea' });
+    localStorage.setItem('mirtv.profils', JSON.stringify(l));
+    localStorage.setItem('mirtv.ouvert', JSON.stringify('u-lea'));
+  });
+  await page.reload();
+  await expect(page.getByText('On regarde plus tard !')).toBeVisible();
+  await expect(page.locator('.abo-qr, [data-cle="payer"]')).toHaveCount(0);
+  // Payé : la télé revient (au prochain lancement)
+  await page.request.get('/__abo?statut=actif');
+  await page.evaluate(() => localStorage.setItem('mirtv.ouvert', JSON.stringify('u-parent')));
+  await page.reload();
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+});
+
+test('fin d’abonnement proche : bandeau « Renouveler » pour le parent', async ({ page }) => {
+  await neuf(page);
+  await page.request.get('/__abo?statut=actif&jours=2');
+  await connexion(page, 'f1-parent');
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => !!JSON.parse(localStorage.getItem('mirtv.abonnements') || '{}').f1)).toBe(true);
+  await page.reload();
+  await expect(page.locator('.bandeau-abo')).toContainText('Votre abonnement se termine le');
+  await page.locator('[data-cle="renouveler"]').click();
+  await expect(page.locator('.abo-qr svg')).toBeVisible();
 });

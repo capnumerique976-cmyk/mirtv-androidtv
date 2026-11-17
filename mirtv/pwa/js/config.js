@@ -17,5 +17,7 @@ window.MIRTV_CONFIG = {
   reconnexions: 3,
   // Qualité maximale des chaînes (hauteur d'image) : 720 par défaut, 480 ou 1080 dans Réglages (par écran)
   qualiteMax: 720,
-  version: "web-0.1.16"
+  // Portail des comptes et paiements (Paymenter). Tant qu'il n'est pas installé, l'appli fait comme avant.
+  urlCompte: (typeof window !== "undefined" && window.MIRTV_URL_COMPTE) || "https://compte.mirtv.rahiss.com",
+  version: "web-0.1.17"
 };

@@ -308,7 +308,7 @@
 
   /* ===================== Gabarits communs ===================== */
 
-  const SANS_ACCUEIL = ["accueil", "accueil-enfants", "qui-regarde", "pause", "code-parent", "connexion", "mot-de-passe"];
+  const SANS_ACCUEIL = ["abonnement-pause", "activation", "accueil", "accueil-enfants", "qui-regarde", "pause", "code-parent", "connexion", "mot-de-passe"];
   function boutonAccueil() {
     if (!profil || (ecranCourant && SANS_ACCUEIL.includes(ecranCourant.nom))) return "";
     return `<button class="bouton bouton-accueil nav" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}">${P.maison}<span class="libelle">${echap(t("bouton_accueil"))}</span></button>`;
@@ -343,8 +343,13 @@
     if (e instanceof ErreurApi && e.statut === 0) return montrer(ecranPasInternet(), true);
     if (e instanceof ErreurApi && e.tropDEcrans) return montrer(ecranTropDEcrans(), true);
     if (e instanceof ErreurApi && e.statut === 401 && profil) {
-      if (estEnfant(profil.nom)) return montrer(ecranPause(), true); // en dehors de la plage horaire
-      return montrer(ecranQuiRegarde(), true);
+      const p = profil;
+      abonnementEnPause(p).then(pause => {
+        if (pause) return montrer(ecranAbonnementPause(p, pause), true);
+        if (estEnfant(p.nom)) return montrer(ecranPause(), true); // en dehors de la plage horaire
+        montrer(ecranQuiRegarde(), true);
+      });
+      return;
     }
     montrer(ecranMessage({ message: t("aide_image_consigne"), boutons: [{ texte: t("bouton_reessayer"), action: () => allerAccueil() }] }), true);
   }
@@ -435,6 +440,8 @@
     } catch (e) {
       if (e instanceof ErreurApi && e.tropDEcrans) return montrer(ecranTropDEcrans());
       if (e instanceof ErreurApi && e.statut === 401) {
+        const pause = await abonnementEnPause(p);
+        if (pause) { ecrire("ouvert", p.id); return montrer(ecranAbonnementPause(p, pause), true); }
         if (estEnfant(p.nom)) { ecrire("ouvert", p.id); return montrer(ecranPause(), true); }
         // jeton expiré : on se reconnecte
         ecrire("profils", profils().filter(x => x.id !== p.id));
@@ -445,7 +452,136 @@
       journal(e);
     }
     ecrire("ouvert", p.id);
+    majAbonnement(p); // en arrière-plan : garde le lien de paiement de la famille
     allerAccueil();
+  }
+
+  /* ===================== Abonnement (portail des comptes) ===================== */
+
+  // L'état de l'abonnement est gardé par famille sur l'écran : ainsi, quand l'abonnement est en pause
+  // (profils coupés), l'appli sait encore où payer.
+  function aboMemo(p) { const a = lire("abonnements") || {}; return (p && a[famille(p.nom)]) || null; }
+  function memoriserAbo(p, etat) {
+    if (!p || !etat || !etat.jeton) return;
+    const a = lire("abonnements") || {};
+    a[famille(p.nom)] = { ...etat, maj: Date.now() };
+    ecrire("abonnements", a);
+  }
+  async function compte(chemin, options = {}) {
+    if (!CONFIG.urlCompte) return null;
+    try {
+      const r = await fetch(CONFIG.urlCompte + chemin, { cache: "no-store", ...options });
+      return r.ok ? await r.json() : null;
+    } catch (e) { return null; }
+  }
+  async function majAbonnement(p) {
+    const etat = await compte("/mirtv/etat", { headers: { "X-MirTV-Jeton": p.jeton } });
+    if (etat && etat.jeton) memoriserAbo(p, etat);
+    return etat;
+  }
+  async function etatAbonnement(p) {
+    const m = aboMemo(p);
+    if (!m) return null;
+    const etat = await compte("/abonnement/" + encodeURIComponent(m.jeton));
+    if (etat) memoriserAbo(p, { ...etat, jeton: m.jeton });
+    return etat ? { ...etat, jeton: m.jeton } : m;
+  }
+  function qr(texte) {
+    try {
+      const q = window.qrcode(0, "M"); q.addData(texte); q.make();
+      return q.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+    } catch (e) { return ""; }
+  }
+  const dateLongue = iso => { try { return new Date(iso).toLocaleDateString(langue() === "mg" ? "mg" : "fr-FR", { day: "numeric", month: "long" }); } catch (e) { return ""; } };
+  function joursRestants(etat) { const f = Date.parse(etat && etat.fin); return isNaN(f) ? null : (f - heureServeur().getTime()) / 86400000; }
+
+  // Profil coupé : est-ce un abonnement en pause ? (sinon c'est un jeton expiré)
+  async function abonnementEnPause(p) {
+    const etat = await etatAbonnement(p);
+    return etat && (etat.statut === "en_pause" || etat.statut === "resilie") ? etat : null;
+  }
+
+  function ecranAbonnementPause(p, etat) {
+    viderPile();
+    let minuterie = null;
+    const enfant = estEnfant(p.nom);
+    return {
+      nom: "abonnement-pause",
+      retour() { if (!enfant) { montrer(ecranQuiRegarde(), true); } return true; }, retourLong() { },
+      fermer() { clearInterval(minuterie); },
+      ouvrir() {
+        const e = enfant
+          ? el(`<section class="ecran enfants ecran-centre"><div style="width:9rem;height:9rem;color:var(--citron)">${P.tele}</div>
+              <p class="message grand">${echap(t("abo_pause_enfants"))}</p>
+              <button class="sortir nav" data-cle="sortir">${P.cadenas}${echap(t("bouton_sortir"))}</button></section>`)
+          : el(`<section class="ecran ecran-centre abo-pause">${barre(t("abo_titre"), false)}
+              <div class="abo-zone"><div class="abo-qr">${qr(etat.payer)}</div>
+                <div class="abo-texte"><p class="message grand">${echap(t("abo_pause_titre"))}</p>
+                  <p class="message">${echap(t("abo_pause_message"))}</p>
+                  <p class="petit">${echap(t("abo_etapes"))}</p>
+                  ${etat.famille ? `<p class="petit">${echap(t("abo_numero_famille", etat.famille))}</p>` : ""}
+                  <div class="boutons" style="justify-content:flex-start">
+                    <a class="bouton principal nav" data-cle="payer" href="${echap(etat.payer)}" target="_blank" rel="noopener">${echap(t("abo_payer_ici"))}</a>
+                    ${etat.whatsapp ? `<a class="bouton nav" data-cle="aide" href="https://wa.me/${echap(String(etat.whatsapp).replace(/\D/g, ""))}" target="_blank" rel="noopener">${echap(t("abo_aide"))}</a>` : ""}
+                    <button class="bouton nav" data-cle="profils">${echap(t("qui_regarde_titre"))}</button></div></div></div></section>`);
+        if (enfant) e.querySelector('[data-cle="sortir"]').addEventListener("click", sortirEspaceEnfants);
+        else e.querySelector('[data-cle="profils"]').addEventListener("click", () => montrer(ecranQuiRegarde(), true));
+        $app.appendChild(e);
+        focaliser(enfant ? '[data-cle="sortir"]' : '[data-cle="payer"]');
+        // Dès que c'est payé, la télé revient toute seule
+        minuterie = setInterval(async () => {
+          const nouvel = await etatAbonnement(p);
+          if (nouvel && nouvel.statut === "actif") { clearInterval(minuterie); ouvrirProfil(p); }
+        }, 30000);
+      }
+    };
+  }
+
+  function ecranRenouveler(etat) {
+    return {
+      nom: "renouveler",
+      ouvrir() {
+        const e = el(`<section class="ecran ecran-centre abo-pause">${barre(t("abo_renouveler"))}
+          <div class="abo-zone"><div class="abo-qr">${qr(etat.payer)}</div>
+            <div class="abo-texte"><p class="message grand">${echap(t("abo_fin_bientot", dateLongue(etat.fin)))}</p>
+              <p class="petit">${echap(t("abo_etapes"))}</p>
+              <div class="boutons" style="justify-content:flex-start">
+                <a class="bouton principal nav" data-cle="payer" href="${echap(etat.payer)}" target="_blank" rel="noopener">${echap(t("abo_payer_ici"))}</a></div></div></div></section>`);
+        $app.appendChild(e);
+        focaliser('[data-cle="payer"]');
+      }
+    };
+  }
+
+  // Écran neuf livré par MirTV ou Web Agence : un code de 8 lettres connecte tous les profils de la famille
+  function ecranActivation() {
+    return {
+      nom: "activation",
+      ouvrir() {
+        const e = el(`<section class="ecran ecran-centre">${barre(t("activation_titre"), false)}
+          <form style="flex:1;display:flex;flex-direction:column;justify-content:center;width:100%" autocomplete="off">
+            <p class="message">${echap(t("activation_consigne"))}</p>
+            <label class="champ">${echap(t("activation_titre"))}<input class="nav code-activation" data-cle="code" name="code" maxlength="9" autocapitalize="characters" spellcheck="false" required></label>
+            <p class="message" data-erreur hidden></p>
+            <div class="boutons"><button class="bouton principal nav" data-cle="ok" type="submit">${echap(t("bouton_se_connecter") || t("connexion_titre"))}</button><button class="bouton nav" type="button" data-cle="annuler">${echap(t("bouton_annuler"))}</button></div>
+          </form>${indices(["indice_retour"])}</section>`);
+        const f = e.querySelector("form");
+        e.querySelector('[data-cle="annuler"]').addEventListener("click", () => reculer());
+        f.addEventListener("submit", async ev => {
+          ev.preventDefault();
+          const zone = e.querySelector("[data-erreur]");
+          zone.hidden = true;
+          const rep = await compte("/mirtv/activer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: f.code.value, appareil: nomAppareil(), id_appareil: appareilId() }) });
+          if (!rep || !rep.profils || !rep.profils.length) { zone.textContent = t("activation_erreur"); zone.hidden = false; return; }
+          rep.profils.forEach(pr => enregistrerProfil({ id: pr.id, nom: pr.nom, jeton: pr.jeton, enfant: !/-parent$/i.test(pr.nom) }));
+          memoriserAbo({ nom: rep.profils[0].nom }, { jeton: rep.jeton, famille: rep.famille, statut: "actif" });
+          viderPile(); ecranCourant = null;
+          montrer(ecranQuiRegarde(), true);
+        });
+        $app.appendChild(e);
+        focaliser('[data-cle="code"]');
+      }
+    };
   }
 
   /* ===================== Connexion ===================== */
@@ -459,9 +595,10 @@
         const e = el(`<section class="ecran ecran-centre">${barre(t("connexion_titre"), false)}
           <div style="flex:1;display:flex;flex-direction:column;justify-content:center;width:100%">
             <div data-rapide hidden><p class="message">${echap(t("connexion_code_consigne"))}</p><div class="code-rapide" data-code></div><p class="petit" data-attente>${echap(t("connexion_code_attente"))}</p></div>
-            <div class="boutons"><button class="bouton nav" data-cle="mdp">${echap(t("connexion_mot_de_passe_lien"))}</button><button class="bouton nav" data-cle="annuler">${echap(t("bouton_annuler"))}</button></div>
+            <div class="boutons"><button class="bouton nav" data-cle="mdp">${echap(t("connexion_mot_de_passe_lien"))}</button><button class="bouton nav" data-cle="activation">${echap(t("activation_lien"))}</button><button class="bouton nav" data-cle="annuler">${echap(t("bouton_annuler"))}</button></div>
           </div>${indices(["indice_retour"])}</section>`);
         e.querySelector('[data-cle="mdp"]').addEventListener("click", () => montrer(ecranMotDePasse(), true));
+        e.querySelector('[data-cle="activation"]').addEventListener("click", () => montrer(ecranActivation(), true));
         e.querySelector('[data-cle="annuler"]').addEventListener("click", () => reculer());
         $app.appendChild(e);
         focaliser('[data-cle="mdp"]');
@@ -687,6 +824,7 @@
             ${tuileImage("favoris", t("tuile_favoris"), "", P.favoris, "var(--lilas)", "art-favoris")}
             ${tuileImage("aide", t("tuile_aide"), "", P.aide, "var(--citron)", "art-aide")}
           </div>
+          <div class="bandeau-abo" hidden><span data-texte></span><button class="bouton nav" data-cle="renouveler">${echap(t("abo_renouveler"))}</button></div>
           <section class="rangee-direct" hidden><h2><span class="point-direct"></span>${echap(t("accueil_en_direct"))}</h2><div class="cartes-direct"></div></section>
           ${indices(["indice_fleches_choisir", "indice_ok_ouvrir"])}</section>`);
         // « Installer MirTV » : petit bouton dans la barre du haut (n'apparaît que si le navigateur le propose)
@@ -709,6 +847,15 @@
       },
       async enrichir(e) {
         const tuile = cle => e.querySelector(`[data-cle="${cle}"]`);
+        // Fin d'abonnement proche (3 jours) : petit bandeau pour le parent, sans déplacer les tuiles
+        const abo = aboMemo(profil);
+        const reste = joursRestants(abo);
+        if (abo && abo.statut === "actif" && abo.payer && reste !== null && reste <= 3 && estParent(profil.nom)) {
+          const b = e.querySelector(".bandeau-abo");
+          b.querySelector("[data-texte]").textContent = t("abo_fin_bientot", dateLongue(abo.fin));
+          b.querySelector('[data-cle="renouveler"]').addEventListener("click", () => montrer(ecranRenouveler(abo)));
+          b.hidden = false;
+        }
         const [chaines, logos] = await Promise.all([chargerChaines().catch(() => []), chargerLogos()]);
         if (!e.isConnected) return;
         // Télé en direct : les programmes en cours se relaient

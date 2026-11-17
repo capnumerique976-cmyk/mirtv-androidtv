@@ -143,7 +143,20 @@ window.MIRTV_TEXTES = {
   "bouton_accueil": "Accueil",
   "badge_direct": "En direct",
   "accueil_en_direct": "En direct maintenant",
-  "tuile_tele_maintenant": "Sur %1$s : %2$s"
+  "tuile_tele_maintenant": "Sur %1$s : %2$s",
+  "abo_pause_titre": "Votre abonnement est en pause.",
+  "abo_pause_message": "Pour regarder à nouveau, payez avec votre téléphone : scannez ce code.",
+  "abo_etapes": "1. Scannez le code. 2. Choisissez la formule. 3. Payez avec Orange Money.",
+  "abo_pause_enfants": "On regarde plus tard !",
+  "abo_payer_ici": "Payer avec ce téléphone",
+  "abo_aide": "Écrire à l'aide",
+  "abo_fin_bientot": "Votre abonnement se termine le %1$s.",
+  "abo_renouveler": "Renouveler",
+  "abo_numero_famille": "Famille n° %1$s",
+  "activation_lien": "J'ai un code d'activation",
+  "activation_consigne": "Entrez le code à 8 lettres donné par MirTV.",
+  "activation_erreur": "Ce code ne marche pas. Vérifiez-le ou demandez un nouveau code.",
+  "abo_titre": "Mon abonnement"
  },
  "mg": {
   "app_nom": "MirTV",
