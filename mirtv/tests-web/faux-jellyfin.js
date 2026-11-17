@@ -22,12 +22,13 @@ const CHAINES = [
   ["c1", "Info Une", "1", "onglet-infos"], ["c2", "Info Deux", "2", "onglet-infos"], ["c3", "Culture Plus", "3", "onglet-culture"],
   ["c4", "Sport Max", "4", "onglet-sport"], ["c5", "Petits Loups", "5", "onglet-enfants"], ["c6", "Dessins Joie", "6", "onglet-enfants"],
   ["c7", "Chaîne En Panne", "7", "onglet-infos"],
-].map(([Id, Name, ChannelNumber, tag]) => ({ Id, Name, ChannelNumber, Type: "TvChannel", Tags: [tag], ImageTags: {}, UserData: { IsFavorite: false },
-  CurrentProgram: { Name: "Journal de " + Name } }));
+].map(([Id, Name, ChannelNumber, tag], i) => ({ Id, Name, ChannelNumber, Type: "TvChannel", Tags: [tag], ImageTags: {}, UserData: { IsFavorite: false },
+  CurrentProgram: { Id: "p-" + Id, Name: "Journal de " + Name, StartDate: new Date(Date.now() - 20 * 60000).toISOString(), EndDate: new Date(Date.now() + 40 * 60000).toISOString(),
+    ImageTags: i % 3 === 2 ? {} : { Primary: "img" + i } } }));
 
 const VIDEOS = [
-  { Id: "v1", Name: "Le Baobab Géant", Tags: ["Nature"], RunTimeTicks: 80 * 60 * 1e7, Overview: "Un voyage au pied du plus grand baobab de Madagascar, avec les familles qui vivent autour. Une deuxième phrase qui ne doit pas s'afficher.", UserData: { PlaybackPositionTicks: 20 * 60 * 1e7, IsFavorite: false }, MediaSources: [{ Id: "v1" }], ImageTags: {} },
-  { Id: "v2", Name: "La Mer à Diego", Tags: ["Nature"], RunTimeTicks: 50 * 60 * 1e7, Overview: "La baie de Diego-Suarez vue du ciel.", UserData: { PlaybackPositionTicks: 0, IsFavorite: false }, MediaSources: [{ Id: "v2" }], ImageTags: {} },
+  { Id: "v1", Name: "Le Baobab Géant", Tags: ["Nature"], RunTimeTicks: 80 * 60 * 1e7, Overview: "Un voyage au pied du plus grand baobab de Madagascar, avec les familles qui vivent autour. Une deuxième phrase qui ne doit pas s'afficher.", UserData: { PlaybackPositionTicks: 20 * 60 * 1e7, IsFavorite: false }, MediaSources: [{ Id: "v1" }], ImageTags: { Primary: "i1" } },
+  { Id: "v2", Name: "La Mer à Diego", Tags: ["Nature"], RunTimeTicks: 50 * 60 * 1e7, Overview: "La baie de Diego-Suarez vue du ciel.", UserData: { PlaybackPositionTicks: 0, IsFavorite: false }, MediaSources: [{ Id: "v2" }], ImageTags: { Primary: "i2" } },
   { Id: "v4", Name: "Court Métrage", Tags: ["Nature"], RunTimeTicks: 20 * 1e7, Overview: "Un film très court.", UserData: { PlaybackPositionTicks: 10 * 1e7, IsFavorite: false }, MediaSources: [{ Id: "v4" }], ImageTags: {} },
   { Id: "v3", Name: "Cuisine Facile", Tags: ["Cuisine", "pas-enfants"], RunTimeTicks: 30 * 60 * 1e7, Overview: "Trois recettes simples.", UserData: { PlaybackPositionTicks: 0, IsFavorite: false }, MediaSources: [{ Id: "v3" }], ImageTags: {} },
 ];
@@ -64,6 +65,18 @@ const serveur = http.createServer((req, res) => {
     // Comme le vrai serveur : un en-tête avec des caractères non ASCII est refusé (400)
     if (/[^\x20-\x7E]/.test(req.headers.authorization || "")) { res.writeHead(400); return res.end(); }
     // Appli web
+    if (p.startsWith("/tv/logos/")) {
+      const f = path.join(__dirname, "fixtures", "logos", path.basename(decodeURIComponent(p)));
+      if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { "Content-Type": f.endsWith(".json") ? "application/json" : "image/png" });
+      return fs.createReadStream(f).pipe(res);
+    }
+    let mi;
+    if ((mi = /^\/Items\/p-c(\d+)\/Images\/Primary$/.exec(p)) || (mi = /^\/Items\/v(\d+)\/Images\/Primary$/.exec(p))) {
+      const f = path.join(__dirname, "fixtures", "images", `prog${Number(mi[1]) % 7}.jpg`);
+      res.writeHead(200, { "Content-Type": "image/jpeg" });
+      return fs.createReadStream(f).pipe(res);
+    }
     if (p === "/tv" ) { res.writeHead(302, { Location: "/tv/" }); return res.end(); }
     if (p.startsWith("/tv/")) {
       const f = path.join(PWA, decodeURIComponent(p.slice(4)) || "index.html");

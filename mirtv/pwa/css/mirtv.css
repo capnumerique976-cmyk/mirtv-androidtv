@@ -198,3 +198,111 @@ input { font: inherit; }
 .lecteur .nom-chaine { top: calc(var(--marge-v) + 3.6rem); }
 @media (hover: none) and (pointer: coarse) { .lecteur:not(:hover) .bouton-accueil-video { opacity: 0.9; } }
 @media (max-width: 760px) { .barre h1 { font-size: 1.4rem; } .bouton-accueil { padding: 0.4rem 0.7rem; } .heure { display: none; } }
+
+/* ======================================================================
+   Habillage « cinéma » (inspiré des box Apple TV) — 17/11/2026
+   Images plein cadre, voile dégradé, élévation + reflet à la sélection,
+   fond d'ambiance flouté tiré de l'élément sélectionné.
+   ====================================================================== */
+
+/* Fond d'ambiance */
+#fond { position: fixed; inset: 0; z-index: 0; background: radial-gradient(120% 90% at 15% 0%, #2a2170 0%, var(--nuit) 55%, #07061a 100%); }
+#fond .calque { position: absolute; inset: -6%; background: center/cover no-repeat; filter: blur(60px) saturate(1.3); opacity: 0; transform: scale(1.1); transition: opacity 900ms ease; }
+#fond .calque.visible { opacity: 0.55; }
+#fond .assombrir { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,8,34,0.55) 0%, rgba(10,8,34,0.78) 60%, rgba(8,6,26,0.95) 100%); }
+#app { z-index: 1; }
+.ecran.ambiance { background: transparent; }
+
+/* Tuiles d'accueil en images */
+.accueil-grille.v2 { flex: 0 0 auto; height: 52vh; gap: 1.4rem; padding: 1.8rem 1.6rem 1rem; grid-template-columns: 1.55fr 1fr 1fr; }
+.tuile-image { position: relative; overflow: hidden; padding: 0; color: var(--blanc); background: var(--teinte); border-radius: 1.1rem;
+  box-shadow: 0 0.6rem 1.6rem rgba(0,0,0,0.35); transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease; }
+.tuile-image .visuel { position: absolute; inset: 0; }
+.tuile-image .visuel img.photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 1200ms ease, transform 7s ease; }
+.tuile-image .visuel img.photo.visible { opacity: 1; transform: scale(1); }
+.tuile-image .voile { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(6,5,22,0.82) 100%); }
+.tuile-image .visuel:not(.avec-images) + .voile { background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(6,5,22,0.35) 100%); }
+.tuile-image .icone { position: absolute; left: 1.2rem; top: 1.1rem; width: 3rem; height: 3rem; border-radius: 0.9rem; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--blanc); }
+.tuile-image .icone svg { width: 1.8rem; height: 1.8rem; }
+.tuile-image .texte { position: absolute; left: 1.3rem; right: 1.3rem; bottom: 1.1rem; display: flex; flex-direction: column; gap: 0.25rem; text-align: left; }
+.tuile-image .titre { font-size: 1.7rem; font-weight: 800; text-shadow: 0 0.15rem 0.8rem rgba(0,0,0,0.45); letter-spacing: -0.01em; }
+.tuile-image.principale .titre { font-size: 2.6rem; }
+.tuile-image .sous { font-size: 1.05rem; font-weight: 600; opacity: 0.92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tuile-image.principale .icone { width: 3.8rem; height: 3.8rem; } .tuile-image.principale .icone svg { width: 2.3rem; height: 2.3rem; }
+
+/* Art original pour les tuiles sans image (formes et dégradés de la charte) */
+.art-tele { background: radial-gradient(60% 80% at 85% 15%, #FFD93D 0%, transparent 60%), radial-gradient(70% 90% at 10% 90%, #FF5C8A 0%, transparent 65%), linear-gradient(135deg, #FF9F1C, #FF6B3D); }
+.art-reprendre { background: radial-gradient(70% 70% at 90% 10%, #FFB3C9 0%, transparent 60%), linear-gradient(140deg, #FF5C8A, #B33A7A); }
+.art-films { background: radial-gradient(70% 70% at 15% 15%, #9BF5EC 0%, transparent 60%), linear-gradient(140deg, #22D3C5, #1478A8); }
+.art-favoris { background: radial-gradient(70% 70% at 85% 85%, #FF9FD0 0%, transparent 60%), linear-gradient(140deg, #A98BFF, #5B3FD6); }
+.art-aide { background: radial-gradient(70% 70% at 20% 20%, #FFF3B0 0%, transparent 60%), linear-gradient(140deg, #FFD93D, #FF9F1C); }
+.art-aide ~ .texte, .art-aide ~ .icone { color: var(--encre); }
+.art-aide ~ .texte .titre { text-shadow: none; }
+.mosaique-logos { position: absolute; right: 1rem; top: 1rem; display: flex; gap: 0.5rem; }
+.mosaique-logos img { width: 3.6rem; height: 2.4rem; object-fit: contain; background: rgba(255,255,255,0.94); border-radius: 0.5rem; padding: 0.25rem; }
+
+/* Rangée « En direct maintenant » */
+.rangee-direct { flex: 1; min-height: 0; padding: 0 0.6rem; }
+.rangee-direct h2 { display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 1rem 0; font-size: 1.25rem; font-weight: 700; color: var(--blanc); }
+.point-direct { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: #FF3B5C; box-shadow: 0 0 0 0 rgba(255,59,92,0.7); animation: pulse 1.8s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,59,92,0.6); } 70% { box-shadow: 0 0 0 0.6rem rgba(255,59,92,0); } 100% { box-shadow: 0 0 0 0 rgba(255,59,92,0); } }
+.cartes-direct { display: flex; gap: 1.2rem; overflow-x: auto; padding: 1rem 1rem 1.4rem; scrollbar-width: none; scroll-snap-type: x proximity; }
+.cartes-direct::-webkit-scrollbar { display: none; }
+.cartes-direct .carte-chaine { flex: 0 0 17rem; scroll-snap-align: start; }
+
+/* Vignettes de chaînes 16:9 */
+.grille-chaines { grid-template-columns: repeat(3, 1fr); gap: 1.6rem 1.4rem; }
+.carte-chaine { position: relative; display: block; aspect-ratio: 16 / 9; min-height: 0; padding: 0; overflow: hidden; border-radius: 0.95rem;
+  background: linear-gradient(150deg, rgba(255,255,255,0.22), rgba(0,0,0,0.28)), var(--teinte); color: var(--blanc);
+  box-shadow: 0 0.5rem 1.4rem rgba(0,0,0,0.35); transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease; }
+.carte-chaine .visuel { position: absolute; inset: 0; }
+.carte-chaine .visuel img { width: 100%; height: 100%; object-fit: cover; }
+.carte-chaine::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(5,4,20,0.88) 100%); z-index: 1; }
+.carte-chaine.sans-visuel::before { background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(5,4,20,0.7) 100%); }
+.carte-chaine .plaque-logo { position: absolute; z-index: 2; left: 0.8rem; top: 0.7rem; height: 2.3rem; min-width: 2.3rem; max-width: 45%; padding: 0.25rem 0.5rem;
+  border-radius: 0.55rem; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; box-shadow: 0 0.2rem 0.6rem rgba(0,0,0,0.25); }
+.carte-chaine .plaque-logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
+.carte-chaine .plaque-logo b { color: var(--encre); font-weight: 800; font-size: 1rem; letter-spacing: 0.04em; }
+.carte-chaine.sans-visuel .plaque-logo { left: 50%; top: 40%; transform: translate(-50%, -50%); height: 4.4rem; max-width: 62%; padding: 0.5rem 0.9rem; border-radius: 0.9rem; }
+.carte-chaine.sans-visuel .plaque-logo b { font-size: 1.7rem; }
+.carte-chaine .badge-direct { position: absolute; z-index: 2; right: 0.8rem; top: 0.8rem; background: #FF3B5C; color: #fff; font-size: 0.72rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 0.35rem; }
+.carte-chaine .infos { position: absolute; z-index: 2; left: 0.9rem; right: 0.9rem; bottom: 0.85rem; display: flex; flex-direction: column; gap: 0.1rem; text-align: left; }
+.carte-chaine .nom { padding: 0; font-weight: 800; font-size: 1.1rem; text-shadow: 0 0.1rem 0.5rem rgba(0,0,0,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.carte-chaine .maintenant { padding: 0; font-size: 0.9rem; color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.carte-chaine .barre-prog { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; height: 0.28rem; background: rgba(255,255,255,0.22); }
+.carte-chaine .barre-prog > span { display: block; height: 100%; background: linear-gradient(90deg, #FF9F1C, #FF5C8A); }
+.grille-favoris { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+
+/* Sélection « box TV » : la carte se soulève, ombre portée et reflet qui passe */
+.tuile-image.nav:focus, .carte-chaine.nav:focus { transform: scale(1.07) translateY(-0.35rem);
+  box-shadow: 0 1.6rem 3rem rgba(0,0,0,0.6), 0 0 0 0.2rem rgba(255,255,255,0.95); }
+.tuile-image::after, .carte-chaine::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.28) 48%, transparent 62%); transform: translateX(-120%); }
+.tuile-image.nav:focus::after, .carte-chaine.nav:focus::after { animation: reflet 900ms ease 80ms 1 forwards; }
+@keyframes reflet { to { transform: translateX(120%); } }
+@media (hover: hover) and (pointer: fine) { .tuile-image:hover, .carte-chaine:hover { transform: scale(1.04) translateY(-0.2rem); } }
+@media (prefers-reduced-motion: reduce) { .tuile-image::after, .carte-chaine::after { display: none; } .tuile-image .visuel img.photo { transition: opacity 600ms; transform: none; } }
+
+/* Onglets façon pilules en verre */
+.onglet { background: rgba(255,255,255,0.1) !important; color: var(--blanc); opacity: 1; border: 0.1rem solid rgba(255,255,255,0.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.onglet.actif { background: var(--blanc) !important; color: var(--encre); }
+
+/* Barre du haut plus discrète */
+.ecran.ambiance .barre h1 { font-size: 1.6rem; }
+.bouton-accueil { background: rgba(255,255,255,0.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.pastille-profil { background: rgba(255,255,255,0.12); }
+
+@media (max-width: 760px) {
+  .accueil-grille.v2 { height: auto; grid-template-columns: 1fr 1fr; grid-template-rows: 13rem; grid-auto-rows: 8.5rem; padding: 1rem 0.2rem; gap: 0.8rem; }
+  .accueil-grille.v2 .principale { grid-column: span 2; grid-row: auto; height: auto; min-height: 0; }
+  .ecran.ambiance .barre h1, .barre h1 { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .grille-chaines .carte-chaine { aspect-ratio: 16 / 8; }
+  .bouton-accueil .libelle { display: none; }
+  .tuile-image .titre { font-size: 1.3rem; } .tuile-image.principale .titre { font-size: 1.9rem; }
+  .grille-chaines { grid-template-columns: 1fr; }
+  .cartes-direct .carte-chaine { flex-basis: 15rem; }
+  .rangee-direct { flex: none; }
+  .tuile-image.nav:focus, .carte-chaine.nav:focus { transform: none; }
+}

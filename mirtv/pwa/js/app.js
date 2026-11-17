@@ -221,6 +221,7 @@
 
   function rendre(ecran) {
     $app.innerHTML = "";
+    viderFond();
     Promise.resolve(ecran.ouvrir()).then(() => {
       if (ecranCourant !== ecran) return;
       if (ecran.focus) focaliser(`[data-cle="${CSS.escape(ecran.focus)}"]`);
@@ -303,7 +304,7 @@
   const SANS_ACCUEIL = ["accueil", "accueil-enfants", "qui-regarde", "pause", "code-parent", "connexion", "mot-de-passe"];
   function boutonAccueil() {
     if (!profil || (ecranCourant && SANS_ACCUEIL.includes(ecranCourant.nom))) return "";
-    return `<button class="bouton bouton-accueil nav" data-accueil data-cle="accueil-btn">${P.maison}${echap(t("bouton_accueil"))}</button>`;
+    return `<button class="bouton bouton-accueil nav" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}">${P.maison}<span class="libelle">${echap(t("bouton_accueil"))}</span></button>`;
   }
   function barre(titre, avecProfil = true) {
     const p = avecProfil && profil ? `<span class="pastille-profil nav" tabindex="0" data-cle="pastille" aria-label="${echap(prenom(profil.nom))}">${animal(indexProfil(profil.id))}${echap(prenom(profil.nom))}</span>` : "";
@@ -541,20 +542,102 @@
   let invitationInstallation = null;
   window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); invitationInstallation = e; });
 
+  // Fond d'ambiance : l'image de l'élément sélectionné, floutée, derrière l'écran (esprit Apple TV)
+  const $fond = (() => {
+    const f = document.createElement("div");
+    f.id = "fond"; f.innerHTML = '<div class="calque"></div><div class="calque"></div><div class="assombrir"></div>';
+    document.body.insertBefore(f, document.body.firstChild);
+    return f;
+  })();
+  let calqueActif = 0, dernierFond = "";
+  function changerFond(url) {
+    if (!url || url === dernierFond) return;
+    dernierFond = url;
+    const calques = $fond.querySelectorAll(".calque");
+    const suivant = calques[1 - calqueActif];
+    const img = new Image();
+    img.onload = () => {
+      if (dernierFond !== url) return;
+      suivant.style.backgroundImage = `url("${url}")`;
+      suivant.classList.add("visible"); calques[calqueActif].classList.remove("visible");
+      calqueActif = 1 - calqueActif;
+    };
+    img.src = url;
+  }
+  function viderFond() { dernierFond = ""; $fond.querySelectorAll(".calque").forEach(c => c.classList.remove("visible")); }
+  document.addEventListener("focusin", e => {
+    const ecran = e.target.closest && e.target.closest(".ecran");
+    if (!ecran || !ecran.classList.contains("ambiance")) return;
+    const f = e.target.dataset && e.target.dataset.fond;
+    if (f) changerFond(f);
+  });
+
+  // Logos des chaînes (copiés sur notre serveur par mirtv/serveur/logos-mirtv.py)
+  let promesseLogos = null;
+  function chargerLogos() {
+    if (!promesseLogos) promesseLogos = fetch("logos/logos.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+    return promesseLogos;
+  }
+  const cleLogo = n => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  function logoDe(c, logos) {
+    if (!logos) return null;
+    if (!logos.__n) Object.defineProperty(logos, "__n", { value: Object.fromEntries(Object.entries(logos).map(([k, v]) => [cleLogo(k), v])) });
+    const f = logos[c.Name] || logos.__n[cleLogo(c.Name)];
+    return f ? "logos/" + encodeURIComponent(f) : null;
+  }
+  const initiales = nom => (nom || "").replace(/\(.*?\)/g, "").split(/\s+/).filter(Boolean).map(m => m[0]).join("").slice(0, 3).toUpperCase();
+  function progression(p) {
+    const d = new Date(p.StartDate), f = new Date(p.EndDate), n = heureServeur();
+    if (isNaN(d) || isNaN(f) || f <= d) return null;
+    return Math.max(0, Math.min(100, (n - d) / (f - d) * 100));
+  }
+  function imageProgramme(c, h = 360) {
+    const p = c.CurrentProgram;
+    return progReel(p, c) && p.ImageTags && p.ImageTags.Primary ? urlImage(p.Id, "Primary", h) : null;
+  }
+
+  function tuileImage(cle, texte, sous, picto, teinte, art, principale = false) {
+    return `<button class="tuile tuile-image nav ${principale ? "principale" : ""}" data-cle="${cle}" style="--teinte:${teinte}">
+      <span class="visuel ${art}"></span><span class="voile"></span>
+      <span class="icone">${picto}</span>
+      <span class="texte"><span class="titre">${echap(texte)}</span>${sous ? `<span class="sous" data-sous>${echap(sous)}</span>` : ""}</span></button>`;
+  }
+  function poserImages(tuile, urls, delai = 6000) {
+    // une ou plusieurs images qui se relaient en fondu dans une tuile
+    const zone = tuile && tuile.querySelector(".visuel");
+    if (!urls.length || !zone) return null;
+    zone.insertAdjacentHTML("beforeend", urls.map((u, i) => `<img src="${u}" alt="" class="photo ${i === 0 ? "visible" : ""}" loading="lazy">`).join(""));
+    zone.querySelectorAll("img.photo").forEach(im => im.addEventListener("error", () => im.remove()));
+    zone.classList.add("avec-images");
+    tuile.dataset.fond = urls[0];
+    if (urls.length < 2) return null;
+    let i = 0;
+    return setInterval(() => {
+      const imgs = zone.querySelectorAll("img.photo"); if (imgs.length < 2) return;
+      imgs[i % imgs.length].classList.remove("visible"); i++;
+      const im = imgs[i % imgs.length]; im.classList.add("visible");
+      tuile.dataset.fond = im.src;
+      if (document.activeElement === tuile) changerFond(im.src);
+    }, delai);
+  }
+
   function ecranAccueil() {
+    const minuteries = [];
     return {
       nom: "accueil",
       retour() { montrer(ecranQuiRegarde(), true); viderPile(); return true; },
       retourLong() { if (estParent(profil.nom)) demanderCodeParent(() => montrer(ecranReglages(), true), () => {}); },
+      fermer() { minuteries.forEach(m => m && clearInterval(m)); },
       ouvrir() {
-        const e = el(`<section class="ecran">${barre(t("accueil_titre"))}
-          <div class="accueil-grille">
-            <button class="tuile principale nav" data-cle="tele" style="background:var(--mangue)">${P.tele}<span>${echap(t("tuile_tele"))}<br><span class="sous">${echap(t("tuile_tele_sous_titre"))}</span></span></button>
-            <button class="tuile nav" data-cle="reprendre" style="background:var(--corail)">${P.reprendre}<span>${echap(t("tuile_reprendre"))}</span></button>
-            <button class="tuile nav" data-cle="films" style="background:var(--lagon)">${P.films}<span>${echap(t("tuile_films"))}</span></button>
-            <button class="tuile nav" data-cle="favoris" style="background:var(--lilas)">${P.favoris}<span>${echap(t("tuile_favoris"))}</span></button>
-            <button class="tuile nav" data-cle="aide" style="background:var(--citron)">${P.aide}<span>${echap(t("tuile_aide"))}</span></button>
+        const e = el(`<section class="ecran ambiance">${barre(t("accueil_titre"))}
+          <div class="accueil-grille v2">
+            ${tuileImage("tele", t("tuile_tele"), t("tuile_tele_sous_titre"), P.tele, "var(--mangue)", "art-tele", true)}
+            ${tuileImage("reprendre", t("tuile_reprendre"), "", P.reprendre, "var(--corail)", "art-reprendre")}
+            ${tuileImage("films", t("tuile_films"), "", P.films, "var(--lagon)", "art-films")}
+            ${tuileImage("favoris", t("tuile_favoris"), "", P.favoris, "var(--lilas)", "art-favoris")}
+            ${tuileImage("aide", t("tuile_aide"), "", P.aide, "var(--citron)", "art-aide")}
           </div>
+          <section class="rangee-direct" hidden><h2><span class="point-direct"></span>${echap(t("accueil_en_direct"))}</h2><div class="cartes-direct"></div></section>
           <div class="boutons" data-installer hidden style="margin-top:0"><button class="bouton nav" data-cle="installer">${echap(t("installer_appli"))}</button></div>
           ${indices(["indice_fleches_choisir", "indice_ok_ouvrir"])}</section>`);
         const go = (cle, f) => e.querySelector(`[data-cle="${cle}"]`).addEventListener("click", f);
@@ -571,6 +654,42 @@
         appuiLong(e.querySelector('[data-cle="pastille"]'), () => { if (estParent(profil.nom)) demanderCodeParent(() => montrer(ecranReglages(), true), () => {}); });
         $app.appendChild(e);
         focaliser('[data-cle="tele"]');
+        this.enrichir(e).catch(err => journal("accueil : images", err));
+      },
+      async enrichir(e) {
+        const tuile = cle => e.querySelector(`[data-cle="${cle}"]`);
+        const [chaines, logos] = await Promise.all([chargerChaines().catch(() => []), chargerLogos()]);
+        if (!e.isConnected) return;
+        // Télé en direct : les programmes en cours se relaient
+        const avecImage = chaines.filter(c => imageProgramme(c));
+        minuteries.push(poserImages(tuile("tele"), avecImage.slice(0, 8).map(c => imageProgramme(c, 720))));
+        const vedette = avecImage[0] || chaines.find(c => progReel(c.CurrentProgram, c));
+        const sous = tuile("tele").querySelector("[data-sous]");
+        if (vedette && sous) sous.textContent = t("tuile_tele_maintenant", vedette.Name, vedette.CurrentProgram.Name);
+        // Rangée « En direct maintenant »
+        const triees = [...avecImage, ...chaines.filter(c => !imageProgramme(c) && progReel(c.CurrentProgram, c)), ...chaines.filter(c => !progReel(c.CurrentProgram, c))];
+        const rangee = e.querySelector(".rangee-direct"), zone = e.querySelector(".cartes-direct");
+        triees.slice(0, 14).forEach((c, i) => {
+          const b = carteChaine(c, i, "d-" + c.Id, logos);
+          b.addEventListener("click", () => montrer(ecranLecteurChaine(c, chaines, false)));
+          zone.appendChild(b);
+        });
+        if (triees.length) rangee.hidden = false;
+        // Mes favoris : logos des chaînes favorites
+        const logosFav = chaines.filter(c => c.UserData && c.UserData.IsFavorite).map(c => logoDe(c, logos)).filter(Boolean).slice(0, 4);
+        if (logosFav.length) tuile("favoris").querySelector(".visuel").insertAdjacentHTML("beforeend", `<span class="mosaique-logos">${logosFav.map(u => `<img src="${u}" alt="">`).join("")}</span>`);
+        // Reprendre et Films : images des vidéos
+        const image = it => it.BackdropImageTags && it.BackdropImageTags.length ? urlImage(it.Id, "Backdrop", 540)
+          : (it.ImageTags && it.ImageTags.Thumb ? urlImage(it.Id, "Thumb", 540) : (it.ImageTags && it.ImageTags.Primary ? urlImage(it.Id, "Primary", 540) : null));
+        try {
+          const r = await api(`/Users/${profil.id}/Items/Resume?MediaTypes=Video&Limit=3`);
+          if (e.isConnected) minuteries.push(poserImages(tuile("reprendre"), ((r && r.Items) || []).map(image).filter(Boolean)));
+        } catch (err) { journal(err); }
+        try {
+          const r = await api(`/Users/${profil.id}/Items?Recursive=true&IncludeItemTypes=Movie,Video&SortBy=Random&Limit=6`);
+          if (e.isConnected) minuteries.push(poserImages(tuile("films"), ((r && r.Items) || []).map(image).filter(Boolean), 7000));
+        } catch (err) { journal(err); }
+        if (document.activeElement && document.activeElement.dataset.fond) changerFond(document.activeElement.dataset.fond);
       }
     };
   }
@@ -605,13 +724,26 @@
     const tag = l.filter(c => (c.Tags || []).includes("onglet-enfants"));
     return tag.length ? tag : l; // côté serveur, le profil enfant ne reçoit déjà que les chaînes permises
   }
-  function carteChaine(c, i, cle) {
+  // Vignette de chaîne : image du programme en cours (ou couleur), logo, badge « En direct », titre, avancement
+  function carteChaine(c, i, cle, logos) {
     const couleur = COULEURS_LOGO[i % COULEURS_LOGO.length];
-    const img = c.ImageTags && c.ImageTags.Primary ? `<img src="${urlImage(c.Id, "Primary", 160)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="grand-numero">${echap(c.ChannelNumber || (c.Name || "").split(/\s+/).map(m => m[0]).join("").slice(0, 3).toUpperCase())}</span>`;
-    const prog = progReel(c.CurrentProgram, c) ? t("chaine_maintenant", c.CurrentProgram.Name) : "";
-    return el(`<button class="carte-chaine nav" data-cle="${cle}" aria-label="${echap(c.Name)}">
-      <span class="zone-logo" style="background:${couleur}">${c.ChannelNumber && c.ImageTags && c.ImageTags.Primary ? `<span class="numero">${echap(c.ChannelNumber)}</span>` : ""}${img}</span>
-      <span class="nom">${echap(c.Name)}</span><span class="maintenant">${echap(prog)}</span></button>`);
+    const logo = logoDe(c, logos);
+    const p = progReel(c.CurrentProgram, c) ? c.CurrentProgram : null;
+    const visuel = imageProgramme(c);
+    const pct = p ? progression(p) : null;
+    const marque = logo ? `<img src="${logo}" alt="" loading="lazy" data-initiales="${echap(initiales(c.Name))}">` : `<b>${echap(initiales(c.Name))}</b>`;
+    const b = el(`<button class="carte-chaine nav ${visuel ? "avec-visuel" : "sans-visuel"}" data-cle="${cle}" ${visuel ? `data-fond="${visuel}"` : ""} aria-label="${echap(c.Name)}" style="--teinte:${couleur}">
+      <span class="visuel">${visuel ? `<img src="${visuel}" alt="" loading="lazy">` : ""}</span>
+      <span class="plaque-logo">${marque}</span>
+      <span class="badge-direct">${echap(t("badge_direct"))}</span>
+      <span class="infos"><span class="nom">${echap(c.Name)}</span>${p ? `<span class="maintenant">${echap(p.Name)}</span>` : ""}</span>
+      ${pct !== null ? `<span class="barre-prog"><span style="width:${pct.toFixed(0)}%"></span></span>` : ""}</button>`);
+    // image ou logo absents : on retombe proprement sur la couleur et les initiales
+    const v = b.querySelector(".visuel img");
+    if (v) v.addEventListener("error", () => { b.classList.replace("avec-visuel", "sans-visuel"); b.removeAttribute("data-fond"); v.remove(); });
+    const l = b.querySelector(".plaque-logo img");
+    if (l) l.addEventListener("error", () => { const t2 = document.createElement("b"); t2.textContent = l.dataset.initiales; l.replaceWith(t2); });
+    return b;
   }
 
   function ecranTele() {
@@ -619,11 +751,11 @@
     return {
       nom: "tele",
       async ouvrir() {
-        const e = el(`<section class="ecran">${barre(t("tele_titre"))}<div class="onglets" role="tablist"></div>
+        const e = el(`<section class="ecran ambiance">${barre(t("tele_titre"))}<div class="onglets" role="tablist"></div>
           <div class="defile"><div class="grille-chaines"></div></div>${indices(["indice_fleches_choisir", "indice_ok_ouvrir", "indice_retour_accueil"])}</section>`);
         $app.appendChild(e);
         e.querySelector(".grille-chaines").appendChild(el(`<p class="message">${echap(t("chargement"))}</p>`));
-        const toutes = await chargerChaines();
+        const [toutes, logos] = await Promise.all([chargerChaines(), chargerLogos()]);
         const presents = ONGLETS.filter(o => toutes.some(c => (c.Tags || []).includes(o.etiquette)));
         if (presents.length && !presents.some(o => o.etiquette === ongletActif)) {
           const derniere = toutes.find(c => c.Id === lire("derniereChaine"));
@@ -640,7 +772,7 @@
             return;
           }
           liste.forEach((c, i) => {
-            const b = carteChaine(c, toutes.indexOf(c), "c-" + c.Id);
+            const b = carteChaine(c, toutes.indexOf(c), "c-" + c.Id, logos);
             b.addEventListener("click", () => montrer(ecranLecteurChaine(c, toutes, false)));
             grille.appendChild(b);
           });
@@ -789,7 +921,7 @@
       const bProg = el(`<button class="bouton nav" data-cle="prog">${P.programme}${echap(t("bouton_programme"))}</button>`);
       bProg.addEventListener("click", () => { ferme = true; arreterLecture(); montrer(ecranProgramme(liste), true); });
       actions.appendChild(bProg);
-      actions.appendChild(el(`<button class="bouton nav" data-accueil data-cle="accueil-btn">${P.maison}${echap(t("bouton_accueil"))}</button>`));
+      actions.appendChild(el(`<button class="bouton nav" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}">${P.maison}<span class="libelle">${echap(t("bouton_accueil"))}</span></button>`));
       focaliser(bFav);
       const progs = (await programmesChaine(courante.Id, 3)).filter(p => progReel(p, courante));
       const zp = zone.querySelector("[data-progs]");
@@ -1129,8 +1261,9 @@
           return;
         }
         let toutes = null;
+        const logos = await chargerLogos();
         chaines.forEach((c, i) => {
-          const b = carteChaine(c, i, "fc-" + c.Id);
+          const b = carteChaine(c, i, "fc-" + c.Id, logos);
           b.addEventListener("click", async () => { toutes = toutes || await chargerChaines(); montrer(ecranLecteurChaine(c, toutes, false)); });
           zone.appendChild(b);
         });
@@ -1214,11 +1347,11 @@
         const e = el(`<section class="ecran enfants">${barre(t("enfants_dessins_animes"))}<div class="defile"><div class="grille-chaines"></div></div>${indices(["indice_fleches_choisir", "indice_ok_ouvrir"])}</section>`);
         $app.appendChild(e);
         const grille = e.querySelector(".grille-chaines");
-        const toutes = await chargerChaines();
+        const [toutes, logos] = await Promise.all([chargerChaines(), chargerLogos()]);
         const liste = chainesEnfants(toutes);
         if (!liste.length) grille.appendChild(el(`<p class="message">${echap(t("tele_vide"))}</p>`));
         liste.forEach((c, i) => {
-          const b = carteChaine(c, i, "c-" + c.Id);
+          const b = carteChaine(c, i, "c-" + c.Id, logos);
           b.addEventListener("click", () => montrer(ecranLecteurChaine(c, liste, true)));
           grille.appendChild(b);
         });

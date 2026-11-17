@@ -130,7 +130,10 @@ window.MIRTV_TEXTES = {
   "connecter_ecran_consigne": "Tapez le code affiché sur l'autre écran.",
   "connecter_ecran_ok": "C'est fait ! L'autre écran est connecté.",
   "connecter_ecran_erreur": "Ce code ne marche pas. Réessayez.",
-  "bouton_accueil": "Accueil"
+  "bouton_accueil": "Accueil",
+  "badge_direct": "En direct",
+  "accueil_en_direct": "En direct maintenant",
+  "tuile_tele_maintenant": "Sur %1$s : %2$s"
  },
  "mg": {
   "app_nom": "MirTV",

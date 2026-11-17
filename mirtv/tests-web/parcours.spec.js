@@ -320,3 +320,22 @@ test('téléphone : connexion et accueil sur un vrai téléphone Android', async
   expect(boite.width).toBeLessThanOrEqual(390);
   await ctx.close();
 });
+
+test('habillage : images du programme, logos des chaînes, rangée « En direct maintenant »', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await expect(page.getByText('En direct maintenant')).toBeVisible({ timeout: 12000 });
+  const rangee = page.locator('.cartes-direct .carte-chaine');
+  expect(await rangee.count()).toBeGreaterThan(2);
+  await expect(page.locator('.cartes-direct .plaque-logo img').first()).toBeVisible();      // logo officiel
+  await expect(page.locator('.cartes-direct .visuel img').first()).toBeVisible();           // image du programme
+  await expect(page.locator('.tuile-image.principale .photo').first()).toBeAttached({ timeout: 8000 });
+  // Une chaîne sans logo garde ses initiales, sans image cassée
+  const cassees = await page.evaluate(() => [...document.querySelectorAll('#app img')].filter(i => i.complete && i.naturalWidth === 0 && getComputedStyle(i).display !== 'none').length);
+  expect(cassees).toBe(0);
+  // OK sur une carte de la rangée ouvre la chaîne
+  await page.locator('.cartes-direct .carte-chaine').first().focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.lecteur')).toBeVisible();
+  await sansMotInterdit(page);
+});
