@@ -69,6 +69,16 @@ def main():
                 cache[url] = None
         return cache[url]
 
+    # Logo noté dans le registre des chaînes (colonne « logo », ex. import iptv-org) : prioritaire
+    du_registre = {}
+    try:
+        with open(os.environ.get("MIRTV_REGISTRE_CSV", "/opt/mirtv/registre/registre-chaines.csv"), encoding="utf-8") as f:
+            for l in csv.DictReader(f, delimiter=";"):
+                if (l.get("logo") or "").startswith("https://"):
+                    du_registre[guide.norm(l.get("nom") or "")] = l["logo"]
+    except OSError:
+        pass
+
     # Logos possibles de chaque chaîne (le meilleur d'abord)
     choix = []
     for _, nom in chaines:
@@ -81,6 +91,9 @@ def main():
         urls = [u for _, u in sorted(meilleurs.get(ident, []), reverse=True) if u.startswith("https://")] if ident else []
         if ident and ident.startswith("https://"):  # association manuelle vers un fichier précis
             urls = [ident]
+        elif du_registre.get(guide.norm(nom)) and ident != "-":
+            urls = [du_registre[guide.norm(nom)]] + [u for u in urls if u != du_registre[guide.norm(nom)]]
+            ident = ident or "registre"
         choix.append((nom, ident, sans_langue, urls))
 
     # Image « logo absent » d'un hébergeur : le même fichier revient pour des chaînes sans rapport → refusé
