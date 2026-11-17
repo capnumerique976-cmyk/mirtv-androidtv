@@ -354,3 +354,13 @@ test('comptes sans préfixe de famille : « irchad » va dans l’espace enfants
   await expect(page.locator('.accueil-grille')).toBeVisible();
   await expect(page.locator('.ecran.enfants')).toHaveCount(0);
 });
+
+test('vignette prise sur la chaîne quand le programme n’a pas d’image', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="o-onglet-culture"]').click();
+  const carte = page.locator('[data-cle="c-c3"]');
+  await expect(carte).toHaveClass(/avec-visuel/);
+  await expect(carte.locator('.visuel img')).toHaveAttribute('src', /apercus\/culture-plus-1234abcd\.jpg/);
+});

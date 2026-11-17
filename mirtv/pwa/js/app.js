@@ -582,7 +582,14 @@
   // Logos des chaînes (copiés sur notre serveur par mirtv/serveur/logos-mirtv.py)
   let promesseLogos = null;
   function chargerLogos() {
-    if (!promesseLogos) promesseLogos = fetch("logos/logos.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+    if (!promesseLogos) {
+      const json = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+      // logos des chaînes + aperçus (image prise sur la chaîne il y a quelques minutes, apercus-mirtv.py)
+      promesseLogos = Promise.all([json("logos/logos.json"), json("apercus/apercus.json")]).then(([logos, apercus]) => {
+        Object.defineProperty(logos, "__apercus", { value: apercus || {} });
+        return logos;
+      });
+    }
     return promesseLogos;
   }
   const cleLogo = n => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -602,6 +609,14 @@
     const p = c.CurrentProgram;
     return progReel(p, c) && p.ImageTags && p.ImageTags.Primary ? urlImage(p.Id, "Primary", h) : null;
   }
+  function apercuDe(c, logos) {
+    const a = logos && logos.__apercus;
+    if (!a) return null;
+    const f = a[c.Name] || Object.entries(a).find(([k]) => cleLogo(k) === cleLogo(c.Name))?.[1];
+    return f ? "apercus/" + encodeURIComponent(f) : null;
+  }
+  // Vignette d'une chaîne : image du programme, sinon image prise sur la chaîne
+  const imageChaine = (c, logos, h) => imageProgramme(c, h) || apercuDe(c, logos);
 
   function tuileImage(cle, texte, sous, picto, teinte, art, principale = false) {
     return `<button class="tuile tuile-image nav ${principale ? "principale" : ""}" data-cle="${cle}" style="--teinte:${teinte}">
@@ -668,13 +683,13 @@
         const [chaines, logos] = await Promise.all([chargerChaines().catch(() => []), chargerLogos()]);
         if (!e.isConnected) return;
         // Télé en direct : les programmes en cours se relaient
-        const avecImage = chaines.filter(c => imageProgramme(c));
-        minuteries.push(poserImages(tuile("tele"), avecImage.slice(0, 8).map(c => imageProgramme(c, 720))));
-        const vedette = avecImage[0] || chaines.find(c => progReel(c.CurrentProgram, c));
+        const avecImage = chaines.filter(c => imageChaine(c, logos));
+        minuteries.push(poserImages(tuile("tele"), avecImage.slice(0, 8).map(c => imageChaine(c, logos, 720))));
+        const vedette = chaines.find(c => imageProgramme(c)) || chaines.find(c => progReel(c.CurrentProgram, c));
         const sous = tuile("tele").querySelector("[data-sous]");
         if (vedette && sous) sous.textContent = t("tuile_tele_maintenant", vedette.Name, vedette.CurrentProgram.Name);
         // Rangée « En direct maintenant »
-        const triees = [...avecImage, ...chaines.filter(c => !imageProgramme(c) && progReel(c.CurrentProgram, c)), ...chaines.filter(c => !progReel(c.CurrentProgram, c))];
+        const triees = [...avecImage, ...chaines.filter(c => !imageChaine(c, logos) && progReel(c.CurrentProgram, c)), ...chaines.filter(c => !imageChaine(c, logos) && !progReel(c.CurrentProgram, c))];
         const rangee = e.querySelector(".rangee-direct"), zone = e.querySelector(".cartes-direct");
         triees.slice(0, 14).forEach((c, i) => {
           const b = carteChaine(c, i, "d-" + c.Id, logos);
@@ -760,7 +775,7 @@
     const couleur = COULEURS_LOGO[i % COULEURS_LOGO.length];
     const logo = logoDe(c, logos);
     const p = progReel(c.CurrentProgram, c) ? c.CurrentProgram : null;
-    const visuel = imageProgramme(c);
+    const visuel = imageChaine(c, logos);
     const pct = p ? progression(p) : null;
     const marque = logo ? `<img src="${logo}" alt="" loading="lazy" data-initiales="${echap(initiales(c.Name))}">` : `<b>${echap(initiales(c.Name))}</b>`;
     const b = el(`<button class="carte-chaine nav ${visuel ? "avec-visuel" : "sans-visuel"}" data-cle="${cle}" ${visuel ? `data-fond="${visuel}"` : ""} aria-label="${echap(c.Name)}" style="--teinte:${couleur}">

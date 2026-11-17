@@ -68,10 +68,10 @@ const serveur = http.createServer((req, res) => {
     // Comme le vrai serveur : un en-tête avec des caractères non ASCII est refusé (400)
     if (/[^\x20-\x7E]/.test(req.headers.authorization || "")) { res.writeHead(400); return res.end(); }
     // Appli web
-    if (p.startsWith("/tv/logos/")) {
-      const f = path.join(__dirname, "fixtures", "logos", path.basename(decodeURIComponent(p)));
+    if (p.startsWith("/tv/logos/") || p.startsWith("/tv/apercus/")) {
+      const f = path.join(__dirname, "fixtures", p.split("/")[2], path.basename(decodeURIComponent(p)));
       if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
-      res.writeHead(200, { "Content-Type": f.endsWith(".json") ? "application/json" : "image/png" });
+      res.writeHead(200, { "Content-Type": f.endsWith(".json") ? "application/json" : f.endsWith(".jpg") ? "image/jpeg" : "image/png" });
       return fs.createReadStream(f).pipe(res);
     }
     let mi;
