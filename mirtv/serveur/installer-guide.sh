@@ -26,3 +26,5 @@ echo "Minuteur : $(systemctl list-timers mirtv-guide.timer --no-legend | awk '{p
 # Le script de branchement des chaînes doit aussi viser le nouveau guide s'il est relancé
 sed -i 's|^XMLTV = "http://dispatcharr:9191/output/epg"|XMLTV = "/config/guide/mirtv-guide.xml"  # fabriqué par mirtv/serveur/guide-mirtv.py|' /home/basania/mirtv/scripts/mirtv-admin/jellyfin_chaines.py
 sudo python3 "$ICI/brancher-guide.py"
+# Récupérateur de programmes sur les sites (iptv-org/epg), chaque nuit
+bash "$ICI/installer-guide-iptv-org.sh"

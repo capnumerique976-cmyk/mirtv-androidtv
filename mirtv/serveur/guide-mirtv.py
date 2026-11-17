@@ -4,25 +4,38 @@
 1. Lit la liste des chaînes MirTV (sortie M3U de Dispatcharr, identifiant tvg-id + nom).
 2. Télécharge les guides gratuits (SOURCES), garde seulement nos chaînes, et renomme leurs identifiants
    avec ceux de Dispatcharr (1, 2, 3…), pour que Jellyfin les associe tout seul.
-3. Les chaînes sans guide gardent les programmes « factices » de Dispatcharr.
+3. Ce qui manque encore est écrit dans sans-guide.json : guide-iptv-org.py va lire ces programmes
+   directement sur les sites (outil iptv-org/epg), chaque nuit ; son résultat est relu ici (LOCAL).
+   Les chaînes toujours sans guide gardent les programmes « factices » de Dispatcharr.
 4. Écrit le résultat dans SORTIE (lu par Jellyfin) et un rapport (chaînes avec / sans guide).
 
 Associations manuelles possibles dans guide-associations.csv (nom MirTV;identifiant dans la source).
 Usage : python3 guide-mirtv.py [--rapport | --chercher mot1 mot2…]   (lancé toutes les 6 heures par le minuteur systemd)
 """
-import csv, gzip, io, os, re, sys, unicodedata, urllib.request
+import csv, gzip, io, json, os, re, sys, unicodedata, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 DISPATCHARR = os.environ.get("MIRTV_DISPATCHARR", "http://127.0.0.1:9191")
 SORTIE = os.environ.get("MIRTV_GUIDE", "/opt/mirtv/jellyfin/config/guide/mirtv-guide.xml")
 ICI = os.path.dirname(os.path.abspath(__file__))
+DOSSIER = os.environ.get("MIRTV_GUIDE_DOSSIER", "/opt/mirtv/guide")
+LOCAL = os.path.join(DOSSIER, "iptv-org.xml")         # fabriqué chaque nuit par guide-iptv-org.py
+SANS_GUIDE = os.path.join(DOSSIER, "sans-guide.json")  # chaînes que guide-iptv-org.py doit chercher
 SOURCES = [
     "https://xmltvfr.fr/xmltv/xmltv.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz",
     "https://epg.pw/xmltv/epg_FR.xml.gz",
+    # chaînes gratuites « FAST » (Pluto TV, Samsung TV Plus, Plex, Roku) : France d'abord, puis le reste
+    "https://i.mjh.nz/PlutoTV/fr.xml.gz",
+    "https://i.mjh.nz/SamsungTVPlus/fr.xml.gz",
+    "https://i.mjh.nz/PlutoTV/all.xml.gz",
+    "https://i.mjh.nz/SamsungTVPlus/all.xml.gz",
+    "https://i.mjh.nz/Plex/all.xml.gz",
+    "https://i.mjh.nz/Roku/all.xml.gz",
     "https://epg.pw/xmltv/epg.xml.gz",                                   # monde entier (gros fichier, lu en flux)
+    LOCAL,                                                               # programmes lus sur les sites (iptv-org/epg)
     "https://epgshare01.online/epgshare01/epg_ripper_ALL_SOURCES1.xml.gz",  # très gros, seulement s'il reste des chaînes
 ]
 JOURS = 2  # on garde 2 jours de programmes
@@ -30,6 +43,8 @@ JOURS = 2  # on garde 2 jours de programmes
 
 def ouvrir(url, timeout=300):
     """Flux décompressé à la volée (les gros guides ne sont jamais entièrement en mémoire)."""
+    if url.startswith("/"):
+        return open(url, "rb")
     req = urllib.request.Request(url, headers={"User-Agent": "MirTV-guide/1.0"})
     r = urllib.request.urlopen(req, timeout=timeout)
     return gzip.GzipFile(fileobj=r) if url.endswith(".gz") else r
@@ -110,6 +125,14 @@ def main(rapport_seul=False):
     fin = maintenant + timedelta(days=JOURS)
 
     for url in SOURCES:
+        if url == LOCAL and not rapport_seul:
+            # ce qui manque encore après les guides tout faits : liste de travail de guide-iptv-org.py
+            os.makedirs(DOSSIER, exist_ok=True)
+            with open(SANS_GUIDE + ".tmp", "w", encoding="utf-8") as f:
+                json.dump(restant, f, ensure_ascii=False, indent=0)
+            os.replace(SANS_GUIDE + ".tmp", SANS_GUIDE)
+        if url == LOCAL and not os.path.exists(LOCAL):
+            continue
         if not restant:
             break
         try:
@@ -132,7 +155,9 @@ def main(rapport_seul=False):
                         pret = True
                         for cid, nom in list(restant.items()):
                             src = manuel.get(nom) if manuel.get(nom) in ids_source else None
-                            for c in ([] if src else [x for c in candidats(nom) for x in (c, c.replace(" ", ""))]):
+                            if url == LOCAL:  # fichier fait pour MirTV : mêmes identifiants
+                                src = cid if cid in ids_source else None
+                            for c in ([] if src or url == LOCAL else [x for c in candidats(nom) for x in (c, c.replace(" ", ""))]):
                                 src = index.get(c)
                                 if src:
                                     break
