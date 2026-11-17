@@ -89,7 +89,7 @@ test('onglets : seuls les onglets non vides, et la grille suit l’onglet', asyn
   await neuf(page);
   await connexion(page, 'f1-parent');
   await page.locator('[data-cle="tele"]').click();
-  await expect(page.locator('.onglet')).toHaveText(['Infos', 'Culture', 'Sport', 'Enfants']);
+  await expect(page.locator('.onglet')).toHaveText(['Infos', 'Cinéma', 'Sport', 'Culture', 'Enfants']);
   await page.locator('[data-cle="o-onglet-sport"]').click();
   await expect(page.locator('.carte-chaine')).toHaveCount(1);
   await expect(page.locator('.carte-chaine')).toContainText('Sport Max');

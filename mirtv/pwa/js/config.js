@@ -15,5 +15,5 @@ window.MIRTV_CONFIG = {
   delaiChaineSecondes: 25,
   // Tentatives silencieuses de reconnexion pendant la lecture d'une chaîne.
   reconnexions: 3,
-  version: "web-0.1.11"
+  version: "web-0.1.12"
 };

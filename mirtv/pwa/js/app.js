@@ -715,10 +715,16 @@
   /* ===================== Chaînes ===================== */
 
   const ONGLETS = [
-    { etiquette: "onglet-infos", texte: "onglet_infos", couleur: "var(--ciel)" },
-    { etiquette: "onglet-culture", texte: "onglet_culture", couleur: "var(--lilas)" },
-    { etiquette: "onglet-sport", texte: "onglet_sport", couleur: "var(--feuille)" },
-    { etiquette: "onglet-enfants", texte: "onglet_enfants", couleur: "var(--citron)" }];
+    { etiquette: "onglet-infos", texte: "onglet_infos" },
+    { etiquette: "onglet-cinema", texte: "onglet_cinema" },
+    { etiquette: "onglet-series", texte: "onglet_series" },
+    { etiquette: "onglet-divertissement", texte: "onglet_divertissement" },
+    { etiquette: "onglet-sport", texte: "onglet_sport" },
+    { etiquette: "onglet-musique", texte: "onglet_musique" },
+    { etiquette: "onglet-decouverte", texte: "onglet_decouverte" },
+    { etiquette: "onglet-animes", texte: "onglet_animes" },
+    { etiquette: "onglet-culture", texte: "onglet_culture" },
+    { etiquette: "onglet-enfants", texte: "onglet_enfants" }];
   const COULEURS_LOGO = ["var(--mangue)", "var(--lagon)", "var(--corail)", "var(--citron)", "var(--lilas)", "var(--feuille)", "var(--ciel)"];
 
   async function chargerChaines() {
@@ -803,7 +809,7 @@
           });
         };
         presents.forEach(o => {
-          const b = el(`<button class="onglet nav ${o.etiquette === ongletActif ? "actif" : ""}" role="tab" data-cle="o-${o.etiquette}" style="background:${o.couleur}">${echap(t(o.texte))}</button>`);
+          const b = el(`<button class="onglet nav ${o.etiquette === ongletActif ? "actif" : ""}" role="tab" data-cle="o-${o.etiquette}" >${echap(t(o.texte))}</button>`);
           const choisir = () => {
             if (ongletActif === o.etiquette) return;
             ongletActif = o.etiquette; ecrire("onglet", o.etiquette);

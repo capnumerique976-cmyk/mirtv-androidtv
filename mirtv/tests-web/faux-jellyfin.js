@@ -24,7 +24,7 @@ const h = n => new Date(Date.now() + n * 3600 * 1000).toISOString();
 const CHAINES = [
   ["c1", "Info Une", "1", "onglet-infos"], ["c2", "Info Deux", "2", "onglet-infos"], ["c3", "Culture Plus", "3", "onglet-culture"],
   ["c4", "Sport Max", "4", "onglet-sport"], ["c5", "Petits Loups", "5", "onglet-enfants"], ["c6", "Dessins Joie", "6", "onglet-enfants"],
-  ["c7", "Chaîne En Panne", "7", "onglet-infos"],
+  ["c7", "Chaîne En Panne", "7", "onglet-infos"], ["c8", "Ciné Nuit", "8", "onglet-cinema"],
 ].map(([Id, Name, ChannelNumber, tag], i) => ({ Id, Name, ChannelNumber, Type: "TvChannel", Tags: [tag], ImageTags: {}, UserData: { IsFavorite: false },
   CurrentProgram: { Id: "p-" + Id, Name: "Journal de " + Name, StartDate: new Date(Date.now() - 20 * 60000).toISOString(), EndDate: new Date(Date.now() + 40 * 60000).toISOString(),
     ImageTags: i % 3 === 2 ? {} : { Primary: "img" + i } } }));
