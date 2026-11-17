@@ -21,8 +21,18 @@ SOURCES = [
     "https://xmltvfr.fr/xmltv/xmltv.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz",
     "https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz",
+    "https://epg.pw/xmltv/epg_FR.xml.gz",
+    "https://epg.pw/xmltv/epg.xml.gz",                                   # monde entier (gros fichier, lu en flux)
+    "https://epgshare01.online/epgshare01/epg_ripper_ALL_SOURCES1.xml.gz",  # très gros, seulement s'il reste des chaînes
 ]
 JOURS = 2  # on garde 2 jours de programmes
+
+
+def ouvrir(url, timeout=300):
+    """Flux décompressé à la volée (les gros guides ne sont jamais entièrement en mémoire)."""
+    req = urllib.request.Request(url, headers={"User-Agent": "MirTV-guide/1.0"})
+    r = urllib.request.urlopen(req, timeout=timeout)
+    return gzip.GzipFile(fileobj=r) if url.endswith(".gz") else r
 
 
 def telecharger(url, timeout=120):
@@ -42,6 +52,28 @@ def norm(s):
     s = re.sub(r"\b(hd|sd|fhd|uhd|tv|channel|chaine|direct|live)\b", " ", s)
     s = re.sub(r"[^a-z0-9]+", " ", s)
     return " ".join(s.split())
+
+
+LANGUES = {
+    "francais": ["fr", "francais", "french"], "anglais": ["en", "english", "anglais"],
+    "allemand": ["de", "german", "deutsch"], "grec": ["gr", "greek", "ellinika"], "hongrois": ["hu", "hungarian", "magyar"],
+    "italien": ["it", "italian", "italiano"], "portugais": ["pt", "portuguese", "portugues"], "russe": ["ru", "russian"],
+    "espagnol": ["es", "spanish", "espanol"], "arabe": ["ar", "arabic", "arabe"],
+}
+
+
+def candidats(nom):
+    """Noms possibles d'une chaîne dans les guides : « Euronews (allemand) » → euronews de, euronews german…"""
+    brut = unicodedata.normalize("NFKD", nom or "").encode("ascii", "ignore").decode().lower()
+    m = re.match(r"^(.*?)\s*\((\w+)\)\s*$", brut)
+    if not m:
+        return [norm(nom)]
+    base, langue = m.group(1), m.group(2)
+    variantes = LANGUES.get(langue, [langue])
+    out = [norm(f"{base} {v}") for v in variantes]
+    if langue == "francais":
+        out.append(norm(base))
+    return out
 
 
 def nos_chaines():
@@ -81,40 +113,54 @@ def main(rapport_seul=False):
         if not restant:
             break
         try:
-            data = telecharger(url)
+            flux = ouvrir(url)
         except Exception as e:
             print(f"Source indisponible : {url} ({e})", file=sys.stderr)
             continue
-        racine = ET.fromstring(data)
-        index = {}
-        for ch in racine.findall("channel"):
-            for dn in ch.findall("display-name"):
-                index.setdefault(norm(dn.text), ch.get("id"))
-            index.setdefault(norm(ch.get("id")), ch.get("id"))
-        ids_source = {ch.get("id") for ch in racine.findall("channel")}
-        choisis = {}
-        for cid, nom in list(restant.items()):
-            src = manuel.get(nom) if manuel.get(nom) in ids_source else None
-            if not src:
-                src = index.get(norm(nom))
-            if not src and norm(nom).endswith(" fr"):
-                src = index.get(norm(nom)[:-3])
-            if src:
-                choisis[src] = cid
-                trouve[cid] = (url, src)
-                del restant[cid]
-        for p in racine.findall("programme"):
-            cid = choisis.get(p.get("channel"))
-            if not cid:
-                continue
-            try:
-                d, f = heure(p.get("start")), heure(p.get("stop"))
-            except Exception:
-                continue
-            if f < maintenant - timedelta(hours=2) or d > fin:
-                continue
-            p.set("channel", cid)
-            programmes.setdefault(cid, []).append(p)
+        index, ids_source, choisis, pret = {}, set(), {}, False
+        try:
+            for _, el in ET.iterparse(flux, events=("end",)):
+                if el.tag == "channel":
+                    cid_s = el.get("id")
+                    ids_source.add(cid_s)
+                    for dn in el.findall("display-name"):
+                        index.setdefault(norm(dn.text), cid_s)
+                    index.setdefault(norm(cid_s), cid_s)
+                    el.clear()
+                elif el.tag == "programme":
+                    if not pret:  # toutes les chaînes de la source sont lues : on associe
+                        pret = True
+                        for cid, nom in list(restant.items()):
+                            src = manuel.get(nom) if manuel.get(nom) in ids_source else None
+                            for c in ([] if src else candidats(nom)):
+                                src = index.get(c)
+                                if src:
+                                    break
+                            if src and src not in choisis:
+                                choisis[src] = cid
+                                trouve[cid] = (url, src)
+                                del restant[cid]
+                        index.clear()
+                        if not choisis:
+                            break  # rien d'utile dans cette source
+                    cid = choisis.get(el.get("channel"))
+                    if cid:
+                        try:
+                            d, f = heure(el.get("start")), heure(el.get("stop"))
+                        except Exception:
+                            d = f = None
+                        if d and f and not (f < maintenant - timedelta(hours=2) or d > fin):
+                            el.set("channel", cid)
+                            el.tail = None
+                            programmes.setdefault(cid, []).append(ET.fromstring(ET.tostring(el)))
+                    el.clear()
+        except ET.ParseError as e:
+            print(f"Source illisible : {url} ({e})", file=sys.stderr)
+        # une chaîne associée sans aucun programme à venir reste à chercher ailleurs
+        for cid in list(trouve):
+            if trouve[cid][0] == url and not programmes.get(cid):
+                restant[cid] = dict(chaines)[cid]
+                del trouve[cid]
 
     print(f"Chaînes avec guide : {len([c for c in trouve if programmes.get(c)])} sur {len(chaines)}")
     for cid, nom in chaines:
