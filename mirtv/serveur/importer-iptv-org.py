@@ -33,7 +33,7 @@ SPORT = "--sport" in sys.argv
 SUFFIXE = "-sport" if SPORT else ""
 
 
-def fichier(nom):
+def chemin_import(nom):
     """candidats.json → candidats-sport.json en import « sport »"""
     base, ext = os.path.splitext(nom)
     return os.path.join(DEST, base + SUFFIXE + ext)
@@ -185,9 +185,9 @@ def candidats():
     b["flux_candidats"] = sum(len(x["flux"]) for x in liste)
     b["date"] = datetime.datetime.now().isoformat(timespec="minutes")
     os.makedirs(DEST, exist_ok=True)
-    with open(fichier("candidats.json"), "w", encoding="utf-8") as f:
+    with open(chemin_import("candidats.json"), "w", encoding="utf-8") as f:
         json.dump(liste, f, ensure_ascii=False)
-    with open(fichier("bilan.json"), "w", encoding="utf-8") as f:
+    with open(chemin_import("bilan.json"), "w", encoding="utf-8") as f:
         json.dump(b, f, ensure_ascii=False, indent=1)
     print(json.dumps(b, ensure_ascii=False))
     return 0
@@ -195,7 +195,7 @@ def candidats():
 
 def ajouter(choix):
     """choix : « 3,7:2,12 » = candidat 3 (1er flux), candidat 7 (2e flux), candidat 12."""
-    with open(fichier("candidats.json"), encoding="utf-8") as f:
+    with open(chemin_import("candidats.json"), encoding="utf-8") as f:
         liste = {x["n"]: x for x in json.load(f)}
     registre = lire_registre()
     urls = {c["url_source"] for c in registre}
@@ -245,9 +245,9 @@ def resultats(fichier):
     with open(fichier, encoding="utf-8") as f:
         codes = json.loads(f.readline())
         brut = f.read().replace("\n", "")
-    with open(fichier("candidats.json"), encoding="utf-8") as f:
+    with open(chemin_import("candidats.json"), encoding="utf-8") as f:
         cand = {x["n"]: x for x in json.load(f)}
-    with open(fichier("bilan.json"), encoding="utf-8") as f:
+    with open(chemin_import("bilan.json"), encoding="utf-8") as f:
         bilan = json.load(f)
     lignes = []
     for r in [r for r in brut.split(";") if r]:
@@ -300,7 +300,7 @@ def resultats(fichier):
     md += ["", "Pour retirer toutes ces chaînes de test : `python3 importer-iptv-org.py --retirer` puis la synchro."]
     texte = "\n".join(md) + "\n"
     os.makedirs(DEST, exist_ok=True)
-    with open(fichier("rapport.md"), "w", encoding="utf-8") as f:
+    with open(chemin_import("rapport.md"), "w", encoding="utf-8") as f:
         f.write(texte)
     import html as h
     corps = []
@@ -320,7 +320,7 @@ def resultats(fichier):
             corps.append(f"<p>{h.escape(ligne)}</p>")
     page = "\n".join(corps)
     page = re.sub(r"((?:<tr>.*</tr>\n?)+)", lambda m: "<table>" + m.group(1) + "</table>", page)
-    with open(fichier("rapport.html"), "w", encoding="utf-8") as f:
+    with open(chemin_import("rapport.html"), "w", encoding="utf-8") as f:
         f.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
                 '<title>' + h.escape(titre) + ' — MirTV</title><style>body{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#1b1840}'
                 'h1{font-size:24px}h2{font-size:18px;margin-top:28px;border-bottom:2px solid #ff9f1c}table{border-collapse:collapse;width:100%}'
