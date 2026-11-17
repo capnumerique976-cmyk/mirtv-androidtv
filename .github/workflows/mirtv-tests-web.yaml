@@ -1,0 +1,35 @@
+# MirTV : tests Playwright du site (mirtv.rahiss.com). Lancement manuel, après chaque envoi sur « mirtv » et chaque nuit.
+name: MirTV / Tests du site
+
+on:
+  push:
+    branches:
+      - mirtv
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+jobs:
+  tests-web:
+    name: Playwright
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Installer Playwright
+        working-directory: mirtv/tests-web
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Lancer les tests
+        working-directory: mirtv/tests-web
+        run: npx playwright test
+      - name: Rapport et captures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapport-playwright
+          retention-days: 14
+          path: |
+            mirtv/tests-web/playwright-report
+            mirtv/tests-web/test-results
