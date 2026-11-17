@@ -27,7 +27,7 @@ gen paymenter_app_key 32
 gen paymenter_admin_password 20
 # Clé API Jellyfin : copie pour l'extension comptes (même valeur, jamais affichée)
 sudo test -s "$SEC/jellyfin_api_key" || sudo sh -c "umask 077; cp /etc/mirtv/secrets/jellyfin_api_key '$SEC/jellyfin_api_key'"
-sudo chmod 600 "$SEC"/*
+sudo sh -c "chmod 600 $SEC/*"
 log "secrets prêts : $(sudo ls "$SEC" | tr '\n' ' ')"
 
 # 3. Réseau de Jellyfin (pour que l'extension comptes lui parle)
