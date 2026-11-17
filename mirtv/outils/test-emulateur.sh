@@ -25,6 +25,8 @@ adb shell dumpsys window | grep -m2 -E "mCurrentFocus|mFocusedApp"
 echo "=== Erreurs du journal (extrait) ==="
 grep -E "E AndroidRuntime|E/AndroidRuntime| E .*(mirtv|MirTV|jellyfin)|ANR|Process .* has died" "$SORTIE/logcat.txt" | head -20
 if ! grep -q 'text="Se connecter"' "$SORTIE/ecran.xml"; then
+  echo "=== Journal détaillé (lancement) ==="
+  grep -E "ActivityManager|ActivityTaskManager|WindowManager|StartupActivity|com.rahiss.mirtv|jellyfin|AndroidRuntime|DEBUG|libc" "$SORTIE/logcat.txt" | cut -c1-230 | head -80
   echo "ECHEC : l'écran « Qui regarde ? » n'offre pas « Se connecter »"; RESULTAT=1
 fi
 if ! adb shell pidof "$APP" | grep -q '[0-9]'; then
