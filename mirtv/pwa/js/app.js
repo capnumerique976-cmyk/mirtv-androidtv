@@ -678,6 +678,7 @@
         // Mes favoris : logos des chaînes favorites
         const logosFav = chaines.filter(c => c.UserData && c.UserData.IsFavorite).map(c => logoDe(c, logos)).filter(Boolean).slice(0, 4);
         if (logosFav.length) tuile("favoris").querySelector(".visuel").insertAdjacentHTML("beforeend", `<span class="mosaique-logos">${logosFav.map(u => `<img src="${u}" alt="">`).join("")}</span>`);
+        tuile("favoris").querySelectorAll(".mosaique-logos img").forEach(i => teinteLogo(i, i));
         // Reprendre et Films : images des vidéos
         const image = it => it.BackdropImageTags && it.BackdropImageTags.length ? urlImage(it.Id, "Backdrop", 540)
           : (it.ImageTags && it.ImageTags.Thumb ? urlImage(it.Id, "Thumb", 540) : (it.ImageTags && it.ImageTags.Primary ? urlImage(it.Id, "Primary", 540) : null));
@@ -724,6 +725,23 @@
     const tag = l.filter(c => (c.Tags || []).includes("onglet-enfants"));
     return tag.length ? tag : l; // côté serveur, le profil enfant ne reçoit déjà que les chaînes permises
   }
+  // Logo clair (texte blanc) : plaque sombre ; logo foncé : plaque blanche
+  const luminanceLogos = new Map();
+  function teinteLogo(img, cible) {
+    const appliquer = clair => { if (clair) cible.classList.add("plaque-sombre"); };
+    if (luminanceLogos.has(img.src)) return appliquer(luminanceLogos.get(img.src));
+    img.addEventListener("load", () => {
+      let clair = false;
+      try {
+        const c = document.createElement("canvas"); c.width = 48; c.height = 48;
+        const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0, 48, 48);
+        const d = x.getImageData(0, 0, 48, 48).data; let somme = 0, n = 0;
+        for (let k = 0; k < d.length; k += 4) if (d[k + 3] > 128) { somme += 0.2126 * d[k] + 0.7152 * d[k + 1] + 0.0722 * d[k + 2]; n++; }
+        clair = n > 0 && somme / n > 200 && n < 48 * 48 * 0.92; // presque blanc et transparent autour
+      } catch (e) { /* image d'ailleurs : on garde la plaque blanche */ }
+      luminanceLogos.set(img.src, clair); appliquer(clair);
+    }, { once: true });
+  }
   // Vignette de chaîne : image du programme en cours (ou couleur), logo, badge « En direct », titre, avancement
   function carteChaine(c, i, cle, logos) {
     const couleur = COULEURS_LOGO[i % COULEURS_LOGO.length];
@@ -742,7 +760,7 @@
     const v = b.querySelector(".visuel img");
     if (v) v.addEventListener("error", () => { b.classList.replace("avec-visuel", "sans-visuel"); b.removeAttribute("data-fond"); v.remove(); });
     const l = b.querySelector(".plaque-logo img");
-    if (l) l.addEventListener("error", () => { const t2 = document.createElement("b"); t2.textContent = l.dataset.initiales; l.replaceWith(t2); });
+    if (l) { l.addEventListener("error", () => { const t2 = document.createElement("b"); t2.textContent = l.dataset.initiales; l.replaceWith(t2); }); teinteLogo(l, l.parentElement); }
     return b;
   }
 

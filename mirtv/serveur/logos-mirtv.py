@@ -12,6 +12,7 @@ import csv, hashlib, importlib.util, json, os, re, sys, urllib.request
 ICI = os.path.dirname(os.path.abspath(__file__))
 DEST = os.environ.get("MIRTV_LOGOS", "/opt/mirtv/images-web/logos")
 API = "https://iptv-org.github.io/api/"
+TVLOGOS_API = "https://api.github.com/repos/tv-logo/tv-logos/contents/countries/"
 
 spec = importlib.util.spec_from_file_location("guide", os.path.join(ICI, "guide-mirtv.py"))
 guide = importlib.util.module_from_spec(spec)
@@ -78,6 +79,8 @@ def main():
             if ident:
                 break
         urls = [u for _, u in sorted(meilleurs.get(ident, []), reverse=True) if u.startswith("https://")] if ident else []
+        if ident and ident.startswith("https://"):  # association manuelle vers un fichier précis
+            urls = [ident]
         choix.append((nom, ident, sans_langue, urls))
 
     # Image « logo absent » d'un hébergeur : le même fichier revient pour des chaînes sans rapport → refusé
@@ -88,6 +91,18 @@ def main():
             if data:
                 vus.setdefault(hashlib.sha1(data).hexdigest(), set()).add(base)
     faux = {h for h, bases in vus.items() if len(bases) >= 3}
+
+    tvlogos = {}
+    for dossier in ("france", "international"):
+        try:
+            req = urllib.request.Request(TVLOGOS_API + dossier, headers={"User-Agent": "MirTV-logos/1.0"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                for f in json.load(r):
+                    nom_f = re.sub(r"-(fr|int)$", "", f["name"].rsplit(".", 1)[0]).replace("-", " ")
+                    for cle in (guide.norm(nom_f), guide.norm(nom_f).replace(" ", "")):
+                        tvlogos.setdefault(cle, f["download_url"])
+        except Exception as e:
+            print(f"  tv-logos indisponible ({dossier}) : {e}", file=sys.stderr)
 
     resultat, sans = {}, []
     for nom, ident, base, urls in choix:
@@ -102,6 +117,17 @@ def main():
             with open(os.path.join(DEST, fichier), "wb") as f:
                 f.write(data)
             break
+        if not fichier and ident != "-":
+            # Deuxième source : dépôt libre tv-logo/tv-logos (logos pour fond sombre)
+            for cand in guide.candidats(nom) + [base]:
+                url = tvlogos.get(cand) or tvlogos.get(cand.replace(" ", ""))
+                data = charger(url) if url else None
+                if data:
+                    fichier = slug(nom) + ".png"
+                    with open(os.path.join(DEST, fichier), "wb") as f:
+                        f.write(data)
+                    ident = url.rsplit("/", 1)[-1]
+                    break
         if not fichier:
             sans.append(nom)
             continue

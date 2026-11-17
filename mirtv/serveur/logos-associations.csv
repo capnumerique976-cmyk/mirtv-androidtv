@@ -1,3 +1,6 @@
 # Logos : nom MirTV;identifiant iptv-org (ou « - » pour aucun logo, l appli affiche les initiales)
 # Zenith (petite télé locale française) ne doit pas prendre le logo de RTB Zenith (Burkina Faso)
 Zenith;-
+# Adresse directe d'un logo possible à la place de l'identifiant
+TV5Monde Info;https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/international/tv5-monde-int.png
+TV5MONDE Chefs;https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/international/tv5-monde-int.png

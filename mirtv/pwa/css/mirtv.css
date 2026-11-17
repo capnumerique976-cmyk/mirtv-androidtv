@@ -263,6 +263,7 @@ input { font: inherit; }
 .carte-chaine .plaque-logo { position: absolute; z-index: 2; left: 0.8rem; top: 0.7rem; height: 2.3rem; min-width: 2.3rem; max-width: 45%; padding: 0.25rem 0.5rem;
   border-radius: 0.55rem; background: rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; box-shadow: 0 0.2rem 0.6rem rgba(0,0,0,0.25); }
 .carte-chaine .plaque-logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
+.carte-chaine .plaque-logo.plaque-sombre, .mosaique-logos img.plaque-sombre { background: rgba(12,10,36,0.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .carte-chaine .plaque-logo b { color: var(--encre); font-weight: 800; font-size: 1rem; letter-spacing: 0.04em; }
 .carte-chaine.sans-visuel .plaque-logo { left: 50%; top: 40%; transform: translate(-50%, -50%); height: 4.4rem; max-width: 62%; padding: 0.5rem 0.9rem; border-radius: 0.9rem; }
 .carte-chaine.sans-visuel .plaque-logo b { font-size: 1.7rem; }
