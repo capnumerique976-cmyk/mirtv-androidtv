@@ -24,7 +24,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 input { font: inherit; }
 
 #app { position: fixed; inset: 0; }
-.ecran { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--marge-v) var(--marge-h); background: var(--nuit); overflow: hidden; }
+.ecran { position: absolute; inset: 0; display: flex; flex-direction: column; padding: calc(var(--marge-v) + env(safe-area-inset-top)) calc(var(--marge-h) + env(safe-area-inset-right)) calc(var(--marge-v) + env(safe-area-inset-bottom)) calc(var(--marge-h) + env(safe-area-inset-left)); background: var(--nuit); overflow: hidden; }
 .ecran.enfants { background: var(--foret); }
 .ecran-centre { align-items: center; justify-content: center; text-align: center; }
 .defile { overflow-y: auto; overflow-x: hidden; flex: 1; padding: 1.4rem 2rem; margin: 0 -2rem; scrollbar-width: none; }
@@ -65,7 +65,7 @@ input { font: inherit; }
 .enfants-grille { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; padding: 2.4rem 2rem; min-height: 0; }
 .enfants-grille .tuile { font-size: 2.2rem; align-items: center; justify-content: center; gap: 1rem; text-align: center; }
 .enfants-grille .tuile svg { width: 6rem; height: 6rem; }
-.sortir { position: absolute; right: var(--marge-h); bottom: var(--marge-v); background: var(--foret2); color: var(--blanc); border-radius: 1rem; padding: 0.6rem 1.2rem; font-size: 1.1rem; font-weight: 700; display: flex; gap: 0.6rem; align-items: center; }
+.sortir { position: absolute; right: calc(var(--marge-h) + env(safe-area-inset-right)); bottom: calc(var(--marge-v) + env(safe-area-inset-bottom)); background: var(--foret2); color: var(--blanc); border-radius: 1rem; padding: 0.6rem 1.2rem; font-size: 1.1rem; font-weight: 700; display: flex; gap: 0.6rem; align-items: center; }
 .sortir svg { width: 1.4rem; height: 1.4rem; }
 
 /* Boutons */
@@ -183,7 +183,9 @@ input { font: inherit; }
   .ligne-programme { grid-template-columns: 1fr; gap: 0.3rem; }
   .fiche { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .fiche .boutons { justify-content: center; }
-  .sortir { position: static; align-self: flex-end; margin-top: 1rem; }
+  .enfants-grille { flex: 0 0 auto; }
+  .sortir { position: static; align-self: center; margin: 1.2rem 0 0.5rem; font-size: 1.5rem; padding: 0.9rem 2.2rem; }
+  .sortir svg { width: 1.8rem; height: 1.8rem; }
   .bandeau { grid-template-columns: 1fr; }
   .bandeau .actions { justify-content: flex-start; }
   .nav:focus { transform: none; }
