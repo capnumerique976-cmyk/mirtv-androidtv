@@ -10,6 +10,10 @@ SHA=$(python3 -c "import json;print(json.load(open('sortie-test/version.json'))[
 time curl -fsSL "$URL" -o publie.apk || { echo "ECHEC : téléchargement"; exit 1; }
 ls -l publie.apk
 echo "$SHA  publie.apk" | sha256sum -c - || { echo "ECHEC : empreinte différente de version.json"; exit 1; }
+BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+echo "=== Manifeste (aapt2) ==="
+"$BT/aapt2" dump badging publie.apk 2>&1 | grep -E "^package|sdkVersion|targetSdk|native-code|uses-feature|application-label:|leanback" | head -20
+"$BT/apksigner" verify -v publie.apk 2>&1 | head -6
 echo "=== Installation ==="
 adb install -r publie.apk 2>&1 | tee sortie-test/installation.txt
 grep -q "Success" sortie-test/installation.txt || { echo "ECHEC installation (voir ligne ci-dessus)"; exit 1; }
