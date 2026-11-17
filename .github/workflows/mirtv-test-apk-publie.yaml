@@ -40,6 +40,8 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
+          ram-size: 3072M
+          heap-size: 512M
           script: bash mirtv/outils/test-apk-publie.sh ${{ github.event.inputs.canal || 'test' }}
       - name: Captures
         if: always()
