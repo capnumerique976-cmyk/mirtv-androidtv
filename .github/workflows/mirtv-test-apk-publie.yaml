@@ -2,6 +2,12 @@
 name: MirTV / Test de l'APK publié
 
 on:
+  push:
+    branches:
+      - mirtv
+    paths:
+      - 'mirtv/outils/test-apk-publie.sh'
+      - '.github/workflows/mirtv-test-apk-publie.yaml'
   workflow_dispatch:
     inputs:
       canal:
