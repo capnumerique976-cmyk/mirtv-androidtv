@@ -119,4 +119,4 @@ sleep 3
 curl -s -o /dev/null -w "[paymenter] contrôle : https://compte.mirtv.rahiss.com répond %{http_code}\n" https://compte.mirtv.rahiss.com/ || true
 curl -s -o /dev/null -w "[paymenter] contrôle : https://mirtv.rahiss.com/admin renvoie vers %{redirect_url}\n" https://mirtv.rahiss.com/admin || true
 log "fini. Guichet MirTV : https://mirtv.rahiss.com/admin  (identifiant : admin@mirtv.rahiss.com)"
-log "mot de passe : sudo cat $SEC/paymenter_admin_password   (à lancer par Ravi)"
+log "mot de passe : pour en choisir un, sudo bash $ICI/changer-mot-de-passe-admin.sh   (à lancer par Ravi)"
