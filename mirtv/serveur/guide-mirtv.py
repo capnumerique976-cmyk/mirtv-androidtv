@@ -8,7 +8,7 @@
 4. Écrit le résultat dans SORTIE (lu par Jellyfin) et un rapport (chaînes avec / sans guide).
 
 Associations manuelles possibles dans guide-associations.csv (nom MirTV;identifiant dans la source).
-Usage : python3 guide-mirtv.py [--rapport]   (lancé toutes les 6 heures par le minuteur systemd)
+Usage : python3 guide-mirtv.py [--rapport | --chercher mot1 mot2…]   (lancé toutes les 6 heures par le minuteur systemd)
 """
 import csv, gzip, io, os, re, sys, unicodedata, urllib.request
 import xml.etree.ElementTree as ET
@@ -194,5 +194,27 @@ def main(rapport_seul=False):
     print(f"Guide écrit : {SORTIE}")
 
 
+def chercher(mots):
+    """Aide aux associations manuelles : liste les chaînes des sources dont le nom contient un des mots."""
+    mots = [norm(m) for m in mots if norm(m)]
+    for url in SOURCES:
+        try:
+            flux = ouvrir(url)
+            for _, el in ET.iterparse(flux, events=("end",)):
+                if el.tag == "programme":
+                    break
+                if el.tag == "channel":
+                    noms = [dn.text or "" for dn in el.findall("display-name")]
+                    texte = " | ".join(norm(n) for n in noms + [el.get("id")])
+                    if any(m in texte for m in mots):
+                        print(f"{url.split('/')[-1]:<34} {el.get('id')!s:<40} {' / '.join(noms)[:70]}")
+                    el.clear()
+        except Exception as e:
+            print(f"Source illisible : {url} ({e})", file=sys.stderr)
+
+
 if __name__ == "__main__":
-    main("--rapport" in sys.argv)
+    if "--chercher" in sys.argv:
+        chercher(sys.argv[sys.argv.index("--chercher") + 1:])
+    else:
+        main("--rapport" in sys.argv)
