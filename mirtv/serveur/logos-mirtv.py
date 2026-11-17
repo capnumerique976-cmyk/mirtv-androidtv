@@ -50,8 +50,7 @@ def main():
         if l.get("feed"):
             continue
         score = (l.get("format") in ("PNG", "SVG", "WebP"), "picons" not in (l.get("tags") or []), l.get("width") or 0)
-        if l["channel"] not in meilleurs or score > meilleurs[l["channel"]][0]:
-            meilleurs[l["channel"]] = (score, l["url"])
+        meilleurs.setdefault(l["channel"], []).append((score, l["url"]))
 
     resultat, sans = {}, []
     for _, nom in chaines:
@@ -60,27 +59,30 @@ def main():
             ident = index.get(cand)
             if ident:
                 break
-        url = meilleurs.get(ident, (None, None))[1] if ident else None
-        if not url or not url.startswith("https://"):
+        urls = [u for _, u in sorted(meilleurs.get(ident, []), reverse=True) if u.startswith("https://")] if ident else []
+        fichier = None
+        for url in urls:  # le meilleur logo d'abord, le suivant s'il ne se télécharge pas
+            ext = os.path.splitext(url.split("?")[0])[1].lower()
+            ext = ext if ext in (".png", ".svg", ".webp", ".jpg", ".jpeg") else ".png"
+            essai = slug(nom) + ext
+            chemin = os.path.join(DEST, essai)
+            if not os.path.exists(chemin):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "MirTV-logos/1.0"})
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        data = r.read(3_000_000)
+                    if len(data) < 200:
+                        raise ValueError("fichier vide")
+                    with open(chemin, "wb") as f:
+                        f.write(data)
+                except Exception as e:
+                    print(f"  logo non téléchargé pour {nom} : {e}", file=sys.stderr)
+                    continue
+            fichier = essai
+            break
+        if not fichier:
             sans.append(nom)
             continue
-        ext = os.path.splitext(url.split("?")[0])[1].lower()
-        ext = ext if ext in (".png", ".svg", ".webp", ".jpg", ".jpeg") else ".png"
-        fichier = slug(nom) + ext
-        chemin = os.path.join(DEST, fichier)
-        if not os.path.exists(chemin):
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": "MirTV-logos/1.0"})
-                with urllib.request.urlopen(req, timeout=30) as r:
-                    data = r.read(3_000_000)
-                if len(data) < 200:
-                    raise ValueError("fichier vide")
-                with open(chemin, "wb") as f:
-                    f.write(data)
-            except Exception as e:
-                print(f"  logo non téléchargé pour {nom} : {e}", file=sys.stderr)
-                sans.append(nom)
-                continue
         resultat[nom] = fichier
         print(f"  OK   {nom} ← {ident}")
     with open(os.path.join(DEST, "logos.json"), "w", encoding="utf-8") as f:
