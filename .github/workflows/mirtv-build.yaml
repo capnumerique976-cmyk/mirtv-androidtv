@@ -64,3 +64,43 @@ jobs:
             --target "${GITHUB_SHA}" --prerelease \
             --title "MirTV ${MIRTV_VERSION_NAME} (${MIRTV_VERSION_CODE}) — non signé" \
             --notes "APK non signé, fabriqué depuis ${GITHUB_SHA}. Il est signé et publié par le serveur MirTV (canal test). Code source : ce dépôt, licence GPL v2."
+
+  emulateur:
+    name: Test de démarrage dans l'émulateur
+    runs-on: ubuntu-26.04
+    needs: build
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Télécharger l'APK fabriqué
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: mirtv-*
+          path: telecharge
+          merge-multiple: true
+      - name: Signer avec une clé jetable (test seulement)
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          keytool -genkeypair -keystore jetable.jks -storepass jetable -keypass jetable -alias t -keyalg RSA -keysize 2048 -validity 2 -dname "CN=test"
+          "$BT/apksigner" sign --ks jetable.jks --ks-pass pass:jetable --key-pass pass:jetable --out mirtv-test.apk telecharge/*-non-signe.apk
+      - name: Activer KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Émulateur Android et test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash mirtv/outils/test-emulateur.sh mirtv-test.apk
+      - name: Captures et journal
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-emulateur
+          retention-days: 14
+          path: sortie-test/
