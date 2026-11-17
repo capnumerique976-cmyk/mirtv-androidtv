@@ -55,7 +55,8 @@ def main():
     resultat, sans = {}, []
     for _, nom in chaines:
         ident = manuel.get(nom)
-        for cand in ([] if ident else guide.candidats(nom)):
+        sans_langue = guide.norm(re.sub(r"\(.*?\)", " ", nom))  # « France 24 (anglais) » → même logo que France 24
+        for cand in ([] if ident else guide.candidats(nom) + [sans_langue]):
             ident = index.get(cand)
             if ident:
                 break
