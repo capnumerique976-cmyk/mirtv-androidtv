@@ -129,6 +129,7 @@ const serveur = http.createServer((req, res) => {
       if (it) it.UserData.IsFavorite = req.method === "POST";
       return json(res, 200, { IsFavorite: req.method === "POST" });
     }
+    if (p === "/QuickConnect/Authorize") return url.searchParams.get("code") === "482913" ? json(res, 200, true) : (res.writeHead(404), res.end());
     if (p === "/Sessions") return json(res, 200, [{ Id: "s-autre", DeviceId: "autre", DeviceName: "Télé du salon", UserName: "f1-parent" }]);
     if (p.startsWith("/Sessions/")) return json(res, 204);
     if (p === "/Videos/v4/stream") {

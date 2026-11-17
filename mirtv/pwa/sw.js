@@ -1,6 +1,6 @@
 /* MirTV — service worker : garde l'appli elle-même en mémoire pour qu'elle s'ouvre vite et sans internet.
    Jamais les vidéos ni les réponses du compte (toujours demandées en direct). */
-const VERSION = "mirtv-web-0.1.4";
+const VERSION = "mirtv-web-0.1.5";
 const FICHIERS = ["./", "index.html", "css/mirtv.css", "js/config.js", "js/textes.js", "js/app.js", "vendor/hls.min.js",
   "manifest.webmanifest", "icons/icone-192.png", "icons/icone-512.png",
   "fonts/lexend_regular.ttf", "fonts/lexend_semibold.ttf", "fonts/lexend_bold.ttf", "fonts/lexend_extrabold.ttf"];

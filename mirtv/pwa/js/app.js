@@ -1139,7 +1139,10 @@
             <button class="tuile nav" data-cle="image" style="background:var(--ciel)">${P.internet}<span>${echap(t("aide_image"))}</span></button>
             <button class="tuile nav" data-cle="contact" style="background:var(--feuille)">${P.message}<span>${echap(t("aide_contacter"))}</span></button>
             <button class="tuile nav" data-cle="numero" style="background:var(--citron)">${P.numero}<span>${echap(t("aide_numero_box"))}</span></button>
-          </div><p class="message" data-reponse style="text-align:center;min-height:2em"></p>${indices(["indice_fleches_choisir", "indice_ok_ouvrir", "indice_retour"])}</section>`);
+          </div><p class="message" data-reponse style="text-align:center;min-height:2em"></p>
+          <div class="boutons" style="margin-top:0"><button class="bouton nav" data-cle="connecter">${P.tele}${echap(t("connecter_ecran_titre"))}</button></div>
+          ${indices(["indice_fleches_choisir", "indice_ok_ouvrir", "indice_retour"])}</section>`);
+        e.querySelector('[data-cle="connecter"]').addEventListener("click", () => montrer(ecranConnecterEcran()));
         const rep = e.querySelector("[data-reponse]");
         e.querySelector('[data-cle="image"]').addEventListener("click", async () => {
           rep.textContent = t("chargement");
@@ -1331,6 +1334,49 @@
     }
   }
 
+  /* ===================== Connecter un autre écran (code rapide) ===================== */
+
+  function ecranConnecterEcran() {
+    let saisie = "", ce = null, envoi = false;
+    const maj = () => ce && ce.querySelectorAll(".code-cases span").forEach((s, i) => { s.textContent = saisie[i] || ""; });
+    async function chiffre(n) {
+      if (envoi || saisie.length >= 6) return;
+      saisie += n; maj();
+      if (saisie.length < 6) return;
+      envoi = true;
+      const msg = ce.querySelector("[data-msg]");
+      try {
+        await api(`/QuickConnect/Authorize?code=${encodeURIComponent(saisie)}&userId=${profil.id}`, { method: "POST" });
+        msg.textContent = t("connecter_ecran_ok");
+      } catch (e) {
+        journal("code refusé", e);
+        msg.textContent = t("connecter_ecran_erreur");
+        saisie = ""; setTimeout(maj, 600);
+      }
+      envoi = false;
+    }
+    return {
+      nom: "connecter-ecran",
+      touche(e) { if (/^[0-9]$/.test(e.key)) { chiffre(e.key); return true; } return false; },
+      ouvrir() {
+        ce = el(`<section class="ecran ecran-centre">${barre(t("connecter_ecran_titre"))}
+          <p class="message">${echap(t("connecter_ecran_consigne"))}</p>
+          <div class="code-cases">${"<span></span>".repeat(6)}</div>
+          <p class="message" data-msg style="min-height:1.4em;margin:0 auto 0.6rem"></p><div class="pave"></div></section>`);
+        const pave = ce.querySelector(".pave");
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach(n => { const b = el(`<button class="nav" data-cle="k${n}">${n}</button>`); b.addEventListener("click", () => chiffre(n)); pave.appendChild(b); });
+        const eff = el(`<button class="nav large" data-cle="effacer">${echap(t("touche_effacer"))}</button>`);
+        eff.addEventListener("click", () => { saisie = saisie.slice(0, -1); maj(); ce.querySelector("[data-msg]").textContent = ""; });
+        const zero = el(`<button class="nav" data-cle="k0">0</button>`); zero.addEventListener("click", () => chiffre("0"));
+        const fin = el(`<button class="nav large rester" data-cle="fini">${echap(t("bouton_revenir"))}</button>`);
+        fin.addEventListener("click", () => reculer());
+        pave.append(eff, zero, fin);
+        $app.appendChild(ce);
+        focaliser('[data-cle="k1"]');
+      }
+    };
+  }
+
   /* ===================== Réglages (profil parent) ===================== */
 
   function ecranReglages() {
@@ -1344,14 +1390,16 @@
             <button class="bouton nav ${langue() === "fr" ? "principal" : ""}" data-cle="fr">${echap(t("langue_fr"))}</button>
             <button class="bouton nav ${langue() === "mg" ? "principal" : ""}" data-cle="mg">${echap(t("langue_mg"))}</button></div>
           <button class="bouton nav" data-cle="code">${P.cadenas}${echap(t("reglages_code"))}</button>
+          <button class="bouton nav" data-cle="connecter">${P.tele}${echap(t("connecter_ecran_titre"))}</button>
           <button class="bouton nav" data-cle="ecrans">${P.tele}${echap(t("mes_ecrans_titre"))}</button>
           <button class="bouton nav" data-cle="oublier">${P.retour}${echap(t("reglages_oublier"))}</button>
           <p class="petit" data-msg></p>
-          <p class="petit">${echap(t("apropos_titre"))} : MirTV ${echap(CONFIG.version)}. ${echap(t("apropos_licence"))}</p>
+          <p class="petit">${echap(t("apropos_titre"))} : MirTV ${echap(CONFIG.version)}</p>
           </div></div>${indices(["indice_fleches_choisir", "indice_ok_ouvrir", "indice_retour"])}</section>`);
         e.querySelector('[data-cle="fr"]').addEventListener("click", () => { ecrire("langue", "fr"); rendre(ecranCourant); });
         e.querySelector('[data-cle="mg"]').addEventListener("click", () => { ecrire("langue", "mg"); rendre(ecranCourant); });
         e.querySelector('[data-cle="ecrans"]').addEventListener("click", () => montrer(ecranMesEcrans()));
+        e.querySelector('[data-cle="connecter"]').addEventListener("click", () => montrer(ecranConnecterEcran()));
         e.querySelector('[data-cle="oublier"]').addEventListener("click", () => {
           effacer("profils"); effacer("ouvert"); effacer("dernierProfil");
           profil = null; viderPile(); ecranCourant = null; montrer(ecranQuiRegarde(), true);

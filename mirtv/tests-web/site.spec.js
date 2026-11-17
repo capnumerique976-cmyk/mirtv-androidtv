@@ -67,3 +67,22 @@ test('l’adresse principale ouvre l’appli web', async ({ request }) => {
   expect([301, 302, 307, 308]).toContain(r.status());
   expect(r.headers()['location']).toMatch(/\/tv\/$/);
 });
+
+test('page web du serveur : écran de chargement, logos et textes sans « Jellyfin »', async ({ page, request }) => {
+  const idx = await (await request.get('/web/index.html')).text();
+  expect(idx).not.toMatch(/Jellyfin/);
+  // L'écran de chargement affiche l'image « icon-transparent » : ce doit être celle de MirTV (petite, orange)
+  const css = [...idx.matchAll(/href="([^"?]+\.css)/g)].map(m => m[1]);
+  let image = null;
+  for (const f of css) { const t = await (await request.get('/web/' + f)).text(); const m = t.match(/\.splashLogo\{[^}]*url\(([^)]+)\)/); if (m) image = m[1]; }
+  expect(image).not.toBeNull();
+  const r = await request.get('/web/' + image);
+  expect(r.status()).toBe(200);
+  expect((await r.body()).length).toBeLessThan(30000);   // le logo d'origine pèse bien plus
+  // Les textes français ne citent plus Jellyfin
+  await page.goto('/web/');
+  await page.waitForTimeout(5000);
+  await expect(page).toHaveTitle(/MirTV/);
+  const visible = (await page.locator('body').innerText()).replace(/MirTV n'est pas le projet Jellyfin\./g, '');
+  expect(visible).not.toMatch(/Jellyfin/);
+});

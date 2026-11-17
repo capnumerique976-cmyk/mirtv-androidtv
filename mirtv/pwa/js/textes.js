@@ -88,7 +88,7 @@ window.MIRTV_TEXTES = {
   "qui_regarde_se_connecter": "Se connecter",
   "chargement": "Un instant…",
   "connexion_titre": "Se connecter",
-  "connexion_code_consigne": "Entrez ce code sur votre compte MirTV.",
+  "connexion_code_consigne": "Entrez ce code sur un écran déjà connecté.",
   "connexion_code_attente": "On attend votre accord…",
   "connexion_mot_de_passe_lien": "Utiliser le nom et le mot de passe",
   "connexion_nom": "Nom du compte",
@@ -125,7 +125,11 @@ window.MIRTV_TEXTES = {
   "installer_appli": "Installer MirTV sur cet appareil",
   "profil_description": "Profil de %1$s",
   "bouton_se_connecter": "Se connecter",
-  "connexion_voir_mot_de_passe": "Afficher le mot de passe"
+  "connexion_voir_mot_de_passe": "Afficher le mot de passe",
+  "connecter_ecran_titre": "Connecter un autre écran",
+  "connecter_ecran_consigne": "Tapez le code affiché sur l'autre écran.",
+  "connecter_ecran_ok": "C'est fait ! L'autre écran est connecté.",
+  "connecter_ecran_erreur": "Ce code ne marche pas. Réessayez."
  },
  "mg": {
   "app_nom": "MirTV",

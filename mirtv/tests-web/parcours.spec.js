@@ -19,7 +19,7 @@ async function connexion(page, nom, mdp = 'test') {
   await page.getByLabel('Mot de passe', { exact: true }).press('Enter');
 }
 async function sansMotInterdit(page) {
-  const texte = (await page.locator('#app').innerText()).replace(/Basé sur Jellyfin[^.]*\./g, '');
+  const texte = await page.locator('#app').innerText();
   expect(texte).not.toMatch(MOTS_INTERDITS);
 }
 const appels = async page => (await page.request.get('/__appels')).json();
@@ -139,6 +139,20 @@ test('Reprendre : « Il reste N min » et reprise en 2 appuis ; fiche vidéo', a
   const resume = await page.locator('.resume').innerText();
   expect(resume.length).toBeLessThanOrEqual(121);
   await expect(page.locator('.duree')).toHaveText('1 h 20');
+});
+
+test('connecter un autre écran avec le code affiché sur cet écran', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="aide"]').click();
+  await page.getByRole('button', { name: 'Connecter un autre écran' }).click();
+  for (const c of '111111') await page.keyboard.press(c);
+  await expect(page.getByText('Ce code ne marche pas. Réessayez.')).toBeVisible();
+  await page.waitForTimeout(700);
+  for (const c of '482913') await page.keyboard.press(c);
+  await expect(page.getByText('C\'est fait ! L\'autre écran est connecté.')).toBeVisible();
+  const texte = await page.locator('#app').innerText();
+  expect(texte).not.toMatch(/jellyfin/i);
 });
 
 test('Mes favoris vide : message et « Voir la télé en direct »', async ({ page }) => {
