@@ -848,6 +848,19 @@
 
   /* ===================== Lecteur ===================== */
 
+  function qualiteMax() { return Number(lire("qualite")) || CONFIG.qualiteMax || 720; }
+  // Réglages de lecture pensés pour une connexion moyenne (Mayotte, Madagascar) :
+  // démarrage sur la plus petite qualité (image en 1 à 2 s), montée progressive, réserve de 30 s contre les saccades.
+  function reglagesHls() {
+    return {
+      enableWorker: true, lowLatencyMode: false,
+      startLevel: 0, abrEwmaDefaultEstimate: 1500000, abrBandWidthFactor: 0.8, abrBandWidthUpFactor: 0.6,
+      startFragPrefetch: true, maxBufferLength: 30, maxMaxBufferLength: 60, backBufferLength: 30,
+      liveSyncDurationCount: 4, liveMaxLatencyDurationCount: 12,
+      manifestLoadingMaxRetry: 3, levelLoadingMaxRetry: 4, fragLoadingMaxRetry: 6, nudgeMaxRetry: 5
+    };
+  }
+
   function ecranLecteurChaine(chaine, liste, enfants) {
     let video, hls = null, minuterieNom = null, minuterieDelai = null, tentatives = 0, debutChangement = 0, bandeauOuvert = false, ferme = false, enLecture = false;
     let courante = chaine;
@@ -859,7 +872,14 @@
       if (video) { video.removeAttribute("src"); try { video.load(); } catch (e) { /* rien */ } }
     }
 
-    async function sourceDirecte(c) {
+    async function sourceDirecte(c, sansMemoire = false) {
+      // Adresse déjà connue (moins de 12 h) : on la prend tout de suite, on gagne un aller-retour vers le serveur
+      const memo = lire("sources") || {};
+      const m = memo[c.Id];
+      if (!sansMemoire && m && Date.now() - m.t < 12 * 3600 * 1000) {
+        sourceDirecte(c, true).catch(() => {}); // le serveur est quand même prévenu, et l'adresse rafraîchie
+        return m.u;
+      }
       // Lecture directe : on demande à Jellyfin la source de la chaîne, puis on ouvre son adresse d'origine.
       const info = await api(`/Items/${c.Id}/PlaybackInfo?UserId=${profil.id}`, {
         method: "POST",
@@ -871,10 +891,13 @@
       if (!/^https?:\/\//i.test(adresse)) throw new Error("source non http : " + adresse);
       if (adresse.includes(location.host)) journal("attention : la source passe par le serveur MirTV", adresse);
       if (location.protocol === "https:" && adresse.startsWith("http:")) journal("source en http sur une page https : le navigateur peut la bloquer", adresse);
+      const l = lire("sources") || {};
+      l[c.Id] = { u: adresse, t: Date.now() };
+      ecrire("sources", l);
       return adresse;
     }
 
-    async function jouer(c, silencieux = false) {
+    async function jouer(c, silencieux = false, sansMemoire = false) {
       arreterLecture();
       courante = c;
       ecrire("derniereChaine", c.Id);
@@ -884,7 +907,7 @@
       if (charge && !silencieux) charge.textContent = t("chargement");
       minuterieDelai = setTimeout(() => { if (!enLecture && !ferme) echec("délai dépassé"); }, CONFIG.delaiChaineSecondes * 1000);
       let adresse;
-      try { adresse = await sourceDirecte(c); }
+      try { adresse = await sourceDirecte(c, sansMemoire || silencieux); }
       catch (e) {
         if (e instanceof ErreurApi && e.tropDEcrans) { ferme = true; arreterLecture(); return montrer(ecranTropDEcrans(), true); }
         if (e instanceof ErreurApi && e.statut === 401 && enfants) { ferme = true; arreterLecture(); return montrer(ecranPause(), true); }
@@ -893,11 +916,23 @@
       if (ferme || courante !== c) return;
       const estHls = /\.m3u8(\?|$)/i.test(adresse) || /m3u8|hls/i.test(adresse);
       if (estHls && window.Hls && window.Hls.isSupported()) {
-        hls = new window.Hls({ enableWorker: true, lowLatencyMode: false, manifestLoadingMaxRetry: 2, levelLoadingMaxRetry: 2, fragLoadingMaxRetry: 2 });
-        hls.on(window.Hls.Events.ERROR, (_, d) => {
+        hls = new window.Hls(reglagesHls());
+        const h = hls;
+        // Qualité plafonnée (720p par défaut) : moins de données, moins de saccades
+        h.on(window.Hls.Events.MANIFEST_PARSED, (_, d) => {
+          const max = qualiteMax();
+          const permis = d.levels.map((l, i) => [l.height || 0, i]).filter(([hauteur]) => hauteur <= max);
+          if (permis.length && permis.length < d.levels.length) h.autoLevelCapping = Math.max(...permis.map(([, i]) => i));
+        });
+        let reparations = 0;
+        h.on(window.Hls.Events.ERROR, (_, d) => {
           if (!d.fatal) return;
           journal("lecture interrompue", d.type, d.details);
+          // Image figée ou coupure courte : on répare sur place avant de tout recharger
+          if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR && reparations < 2) { reparations++; h.recoverMediaError(); return; }
+          if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR && enLecture && reparations < 2) { reparations++; h.startLoad(); return; }
           if (enLecture && tentatives < CONFIG.reconnexions) { tentatives++; journal("reconnexion silencieuse", tentatives); setTimeout(() => !ferme && jouer(courante, true), 1500); }
+          else if (!enLecture && !sansMemoire && lire("sources")?.[c.Id]) { journal("adresse mémorisée refusée, nouvelle demande"); jouer(c, silencieux, true); }
           else echec(d.details);
         });
         hls.loadSource(adresse);
@@ -1584,6 +1619,9 @@
           <div class="boutons" style="justify-content:flex-start;margin:0">
             <button class="bouton nav ${langue() === "fr" ? "principal" : ""}" data-cle="fr">${echap(t("langue_fr"))}</button>
             <button class="bouton nav ${langue() === "mg" ? "principal" : ""}" data-cle="mg">${echap(t("langue_mg"))}</button></div>
+          <p class="petit">${echap(t("reglages_qualite"))}</p>
+          <div class="boutons" style="justify-content:flex-start;margin:0">
+            ${[[480, "qualite_economie"], [720, "qualite_normale"], [1080, "qualite_haute"]].map(([q, cle]) => `<button class="bouton nav ${qualiteMax() === q ? "principal" : ""}" data-cle="q${q}">${echap(t(cle))}</button>`).join("")}</div>
           <button class="bouton nav" data-cle="code">${P.cadenas}${echap(t("reglages_code"))}</button>
           <button class="bouton nav" data-cle="connecter">${P.tele}${echap(t("connecter_ecran_titre"))}</button>
           <button class="bouton nav" data-cle="ecrans">${P.tele}${echap(t("mes_ecrans_titre"))}</button>
@@ -1593,6 +1631,7 @@
           </div></div>${indices(["indice_fleches_choisir", "indice_ok_ouvrir", "indice_retour"])}</section>`);
         e.querySelector('[data-cle="fr"]').addEventListener("click", () => { ecrire("langue", "fr"); rendre(ecranCourant); });
         e.querySelector('[data-cle="mg"]').addEventListener("click", () => { ecrire("langue", "mg"); rendre(ecranCourant); });
+        [480, 720, 1080].forEach(q => e.querySelector(`[data-cle="q${q}"]`).addEventListener("click", () => { ecrire("qualite", q); rendre(ecranCourant); }));
         e.querySelector('[data-cle="ecrans"]').addEventListener("click", () => montrer(ecranMesEcrans()));
         e.querySelector('[data-cle="connecter"]').addEventListener("click", () => montrer(ecranConnecterEcran()));
         e.querySelector('[data-cle="oublier"]').addEventListener("click", () => {

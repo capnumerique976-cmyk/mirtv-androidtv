@@ -364,3 +364,21 @@ test('vignette prise sur la chaîne quand le programme n’a pas d’image', asy
   await expect(carte).toHaveClass(/avec-visuel/);
   await expect(carte.locator('.visuel img')).toHaveAttribute('src', /apercus\/culture-plus-1234abcd\.jpg/);
 });
+
+test('qualité des chaînes : 720p par défaut, réglable, et adresse mémorisée pour lancer plus vite', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await expect(page.locator('[data-cle="tele"]')).toBeFocused();
+  await page.keyboard.down('Escape'); await page.waitForTimeout(1000); await page.keyboard.up('Escape');
+  for (const c of '1234') await page.keyboard.press(c);
+  await expect(page.getByRole('button', { name: 'Normale (720p)' })).toHaveClass(/principal/);
+  await page.getByRole('button', { name: 'Économie (480p)' }).click();
+  await expect(page.getByRole('button', { name: 'Économie (480p)' })).toHaveClass(/principal/);
+  expect(await page.evaluate(() => localStorage.getItem('mirtv.qualite'))).toBe('480');
+  // Une chaîne déjà ouverte : son adresse est mémorisée pour la fois suivante
+  await page.goto('/tv/');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="c-c1"]').click();
+  await expect(page.locator('.lecteur video')).toBeAttached();
+  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('mirtv.sources') || '{}')))).toContain('c1');
+});

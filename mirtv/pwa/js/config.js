@@ -15,5 +15,7 @@ window.MIRTV_CONFIG = {
   delaiChaineSecondes: 25,
   // Tentatives silencieuses de reconnexion pendant la lecture d'une chaîne.
   reconnexions: 3,
-  version: "web-0.1.14"
+  // Qualité maximale des chaînes (hauteur d'image) : 720 par défaut, 480 ou 1080 dans Réglages (par écran)
+  qualiteMax: 720,
+  version: "web-0.1.15"
 };
