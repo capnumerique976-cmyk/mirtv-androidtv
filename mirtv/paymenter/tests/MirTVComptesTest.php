@@ -222,4 +222,16 @@ class MirTVComptesTest extends TestCase
         Http::assertSent(fn ($r) => $r->method() === 'DELETE');
         $this->assertSame('supprimee', MirTV::famille($s)->statut);
     }
+
+    public function test_actions_du_compte_client(): void
+    {
+        $s = $this->serviceMirTV();
+        ExtensionHelper::createServer($s);
+        DB::table(MirTV::TABLE)->update(['code_expire_at' => now()->subMinute()]);
+        $actions = ExtensionHelper::getActions($s);
+        $this->assertSame('n° 1001', $actions[0]['text']);
+        $this->assertMatchesRegularExpression('/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4} /', $actions[1]['text']);
+        $this->assertTrue(now()->lessThan(MirTV::famille($s)->code_expire_at)); // nouveau code valable
+        $this->assertStringContainsString('/payer/', $actions[2]['url']);
+    }
 }

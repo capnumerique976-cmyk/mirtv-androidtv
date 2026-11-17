@@ -223,7 +223,15 @@ class MirTV extends Server
             return [];
         }
 
+        // Code d'activation toujours valable quand on le consulte (nouveau code si l'ancien a expiré)
+        if (!$f->code_expire_at || now()->greaterThan($f->code_expire_at)) {
+            DB::table(self::TABLE)->where('id', $f->id)->update(['code_activation' => self::code(), 'code_expire_at' => now()->addHours(48), 'updated_at' => now()]);
+            $f = self::famille($service);
+        }
+
         return [
+            ['type' => 'text', 'label' => 'Famille', 'text' => 'n° ' . $f->numero],
+            ['type' => 'text', 'label' => 'Code d\'activation d\'un écran', 'text' => substr($f->code_activation, 0, 4) . '-' . substr($f->code_activation, 4) . ' (valable 48 h, une seule fois)'],
             ['type' => 'button', 'label' => 'Payer ou renouveler', 'url' => rtrim($this->config('url_publique'), '/') . '/payer/' . $f->jeton_paiement],
             ['type' => 'button', 'label' => 'Ouvrir MirTV', 'url' => $this->config('url_appli')],
         ];
