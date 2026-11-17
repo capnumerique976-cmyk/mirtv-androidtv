@@ -116,6 +116,8 @@
     cadenas: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"><rect x="10" y="22" width="28" height="20" rx="4"/><path d="M16 22v-6a8 8 0 0116 0v6"/></svg>',
     dessins: '<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="26" r="16"/><circle cx="12" cy="10" r="7"/><circle cx="36" cy="10" r="7"/></svg>',
     soustitres: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><rect x="5" y="10" width="38" height="28" rx="4"/><path d="M12 30h10M26 30h10M12 22h24"/></svg>',
+    plein: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V6h11M31 6h11v11M42 31v11H31M17 42H6V31"/></svg>',
+    reduire: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6v11H6M42 17H31V6M31 42V31h11M6 31h11v11"/></svg>',
     programme: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M10 12h28M10 24h28M10 36h18"/></svg>',
     internet: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M6 18a26 26 0 0136 0M12 25a17 17 0 0124 0M18 32a8 8 0 0112 0"/><circle cx="24" cy="39" r="2" fill="currentColor"/></svg>',
     message: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"><path d="M8 10h32v22H20l-8 7v-7H8z"/></svg>',
@@ -1228,6 +1230,11 @@
       const bProg = el(`<button class="bouton nav" data-cle="prog">${P.programme}${echap(t("bouton_programme"))}</button>`);
       bProg.addEventListener("click", () => { ferme = true; arreterLecture(); montrer(ecranProgramme(liste), true); });
       actions.appendChild(bProg);
+      if (pleinEcranDispo(video)) {
+        const bPlein = el(`<button class="bouton nav" data-cle="plein">${enPleinEcran() ? P.reduire : P.plein}${echap(t(enPleinEcran() ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"))}</button>`);
+        bPlein.addEventListener("click", () => { fermerBandeau(); basculerPleinEcran(video); });
+        actions.appendChild(bPlein);
+      }
       actions.appendChild(el(`<button class="bouton nav" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}">${P.maison}<span class="libelle">${echap(t("bouton_accueil"))}</span></button>`));
       focaliser(bFav);
       const progs = (await programmesChaine(courante.Id, 3)).filter(p => progReel(p, courante));
@@ -1265,7 +1272,7 @@
 
     return {
       nom: "lecteur-chaine",
-      fermer() { ferme = true; arreterLecture(); clearTimeout(minuterieNom); },
+      fermer() { ferme = true; arreterLecture(); clearTimeout(minuterieNom); quitterPleinEcran(); },
       retour() { if (bandeauOuvert) { fermerBandeau(); return true; } return false; },
       touche(e) {
         if (bandeauOuvert) return false;
@@ -1273,6 +1280,7 @@
         if (e.key === "ArrowDown" || e.key === "ChannelDown" || e.keyCode === 428) { zapper(-1); return true; }
         if (e.key === "Enter" || e.keyCode === 13) { if (video && video.paused) video.play().catch(() => {}); ouvrirBandeau(); return true; }
         if (e.key === "ArrowLeft" || e.key === "ArrowRight") return true;
+        if (e.key === "f" || e.key === "F") { basculerPleinEcran(video); return true; }
         return false;
       },
       ouvrir() {
@@ -1297,17 +1305,55 @@
         let y0 = null;
         e.addEventListener("pointerdown", ev => { y0 = ev.clientY; });
         e.addEventListener("pointerup", ev => {
-          if (y0 === null || ev.target.closest(".bandeau, [data-accueil]")) { y0 = null; return; }
+          if (y0 === null || ev.target.closest(".bandeau, [data-accueil], [data-plein]")) { y0 = null; return; }
           const dy = ev.clientY - y0; y0 = null;
           if (Math.abs(dy) > 60) zapper(dy < 0 ? 1 : -1);
           else if (!bandeauOuvert) { if (video.paused) video.play().catch(() => {}); ouvrirBandeau(); }
         });
+        boutonPleinEcran(e, video);
         $app.appendChild(e);
         e.focus({ preventScroll: true });
         montrerNom(chaine);
         jouer(chaine);
       }
     };
+  }
+
+  /* ===================== Plein écran (lecteurs) ===================== */
+
+  const pleinEcranPossible = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const enPleinEcran = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const pleinEcranDispo = video => pleinEcranPossible() || !!(video && video.webkitEnterFullscreen);
+  async function basculerPleinEcran(video) {
+    try {
+      if (enPleinEcran()) { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+      if (pleinEcranPossible()) {
+        const r = document.documentElement;
+        await (r.requestFullscreen || r.webkitRequestFullscreen).call(r, { navigationUI: "hide" });
+        try { await screen.orientation.lock("landscape"); } catch (e) { /* ordinateur ou navigateur sans rotation */ }
+      } else if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen(); // iPhone : plein écran de la vidéo
+    } catch (e) { journal("plein écran refusé", e); }
+  }
+  function quitterPleinEcran() {
+    try { if (enPleinEcran()) { const p = (document.exitFullscreen || document.webkitExitFullscreen).call(document); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* rien */ }
+    try { screen.orientation.unlock(); } catch (e) { /* rien */ }
+  }
+  // Bouton « Plein écran » en haut à droite du lecteur (souris, doigt) ; libellé tenu à jour
+  function boutonPleinEcran(e, video) {
+    if (!pleinEcranDispo(video)) return;
+    const b = el(`<button class="bouton bouton-plein-ecran-video" data-plein tabindex="-1"></button>`);
+    const maj = () => {
+      if (!b.isConnected && b.dataset.pose) { document.removeEventListener("fullscreenchange", maj); document.removeEventListener("webkitfullscreenchange", maj); return; }
+      const on = enPleinEcran(); b.innerHTML = (on ? P.reduire : P.plein) + `<span class="libelle">${echap(t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"))}</span>`; b.setAttribute("aria-label", t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"));
+    };
+    maj();
+    b.dataset.pose = "1";
+    b.addEventListener("click", ev => { ev.stopPropagation(); basculerPleinEcran(video); });
+    document.addEventListener("fullscreenchange", maj);
+    document.addEventListener("webkitfullscreenchange", maj);
+    e.appendChild(b);
+    // Ordinateur : double-clic sur l'image
+    e.addEventListener("dblclick", ev => { if (!ev.target.closest(".bandeau, [data-accueil], [data-plein]")) basculerPleinEcran(video); });
   }
 
   function reculerJusqua(nom) {
@@ -1474,6 +1520,7 @@
         if (!ferme && demarre) signaler("/Sessions/Playing/Stopped");
         ferme = true; clearInterval(minuterie);
         if (video) { try { video.pause(); } catch (e) { /* rien */ } video.removeAttribute("src"); try { video.load(); } catch (e) { /* rien */ } }
+        quitterPleinEcran();
       },
       touche(e) {
         if (!video) return false;
@@ -1481,6 +1528,7 @@
         if (e.key === "ArrowRight" || e.key === "MediaFastForward") { video.currentTime = Math.min(video.duration || 1e9, video.currentTime + 30); return true; }
         if (e.key === "ArrowLeft" || e.key === "MediaRewind") { video.currentTime = Math.max(0, video.currentTime - 10); return true; }
         if (e.key === "ArrowUp" || e.key === "ArrowDown") return true;
+        if (e.key === "f" || e.key === "F") { basculerPleinEcran(video); return true; }
         return false;
       },
       ouvrir() {
@@ -1501,6 +1549,7 @@
         setTimeout(() => { if (!demarre && !ferme && video.readyState === 0) echec("délai dépassé"); }, 20000);
         video.src = url;
         video.play().catch(err => journal("lecture automatique refusée", err));
+        boutonPleinEcran(e, video);
         $app.appendChild(e);
         e.focus({ preventScroll: true });
       }

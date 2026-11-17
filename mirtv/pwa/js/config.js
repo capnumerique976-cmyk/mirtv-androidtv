@@ -19,5 +19,5 @@ window.MIRTV_CONFIG = {
   qualiteMax: 720,
   // Portail des comptes et paiements (Paymenter). Tant qu'il n'est pas installé, l'appli fait comme avant.
   urlCompte: (typeof window !== "undefined" && window.MIRTV_URL_COMPTE) || "https://compte.mirtv.rahiss.com",
-  version: "web-0.1.18"
+  version: "web-0.1.19"
 };

@@ -493,3 +493,27 @@ test('abonnement en pause : bouton d\'aide WhatsApp du guichet', async ({ page }
   await expect(page.locator('.abo-pause')).toBeVisible();
   await expect(page.locator('.abo-pause [data-cle="aide"]')).toHaveAttribute('href', /wa\.me\/261340000000/);
 });
+
+test('lecteur : bouton « Plein écran » visible, entre et sort du plein écran (aussi dans le bandeau)', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="c-c1"]').click();
+  const bouton = page.locator('[data-plein]');
+  await expect(bouton).toBeVisible();
+  await expect(bouton).toHaveAttribute('aria-label', 'Plein écran');
+  await bouton.click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+  await expect(bouton).toHaveAttribute('aria-label', 'Quitter le plein écran');
+  await page.screenshot({ path: 'test-results/lecteur-plein-ecran.png' });
+  await bouton.click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
+  // Télécommande : OK ouvre le bandeau, qui propose aussi « Plein écran »
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.bandeau [data-cle="plein"]')).toBeVisible();
+  await page.locator('.bandeau [data-cle="plein"]').click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+  // En quittant le lecteur, on sort du plein écran
+  await page.locator('.bouton-accueil-video').click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
+});
