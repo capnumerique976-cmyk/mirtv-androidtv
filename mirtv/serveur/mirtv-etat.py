@@ -17,6 +17,8 @@ Aucun secret n'est affiché.
 """
 import datetime, glob, json, os, shutil, socket, ssl, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
+os.environ.setdefault("TZ", "Indian/Antananarivo")  # heures affichées à l'heure de Madagascar
+time.tzset()
 SITE = os.environ.get("MIRTV_SITE", "mirtv.rahiss.com")
 COMPTE = os.environ.get("MIRTV_COMPTE", "compte.mirtv.rahiss.com")
 JELLYFIN = os.environ.get("MIRTV_JELLYFIN_URL", "http://127.0.0.1:8096")
