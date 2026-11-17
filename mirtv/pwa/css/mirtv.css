@@ -1,0 +1,190 @@
+/* MirTV — appli web (télé, ordinateur, téléphone). Valeurs : design/tokens.json.
+   Tout est en rem : 1 rem = 24 px sur un écran 1920 × 1080 (tailles du design divisées par 24). */
+
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_semibold.ttf") format("truetype"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_extrabold.ttf") format("truetype"); font-weight: 800; font-display: swap; }
+
+:root {
+  --nuit: #120E36; --nuit2: #1F1A52; --nuit3: #2C2670; --nuit-video: #0B0A1F;
+  --foret: #0F3A2F; --foret2: #1B5244;
+  --encre: #120E36; --blanc: #FFFFFF; --doux: #D6D3F5; --doux-foret: #D6F5E3; --indice: #B9B4EA;
+  --mangue: #FF9F1C; --corail: #FF5C8A; --lagon: #22D3C5; --citron: #FFD93D; --lilas: #A98BFF; --feuille: #5BE37D; --ciel: #4CC9FF;
+  --rayon: 0.84rem; --rayon-carte: 0.75rem;
+  --marge-h: 4rem; --marge-v: 2.25rem; --entre: 0.84rem;
+  --focus-duree: 160ms;
+}
+html { font-size: clamp(12px, min(1.25vw, 2.222vh), 32px); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--nuit); color: var(--blanc); font-family: "Lexend", system-ui, sans-serif; }
+body { overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+input { font: inherit; }
+
+#app { position: fixed; inset: 0; }
+.ecran { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--marge-v) var(--marge-h); background: var(--nuit); overflow: hidden; }
+.ecran.enfants { background: var(--foret); }
+.ecran-centre { align-items: center; justify-content: center; text-align: center; }
+.defile { overflow-y: auto; overflow-x: hidden; flex: 1; padding: 1.4rem 2rem; margin: 0 -2rem; scrollbar-width: none; }
+.defile::-webkit-scrollbar { display: none; }
+
+/* Logo */
+.logo { display: inline-flex; align-items: center; gap: 0.15em; font-weight: 800; font-size: 1.4rem; }
+.logo-mir { background: var(--mangue); color: var(--encre); border-radius: 0.35em; padding: 0.02em 0.25em; }
+.logo-tv { color: var(--blanc); }
+.logo-grand { font-weight: 800; font-size: 5rem; display: inline-flex; gap: 0.12em; }
+
+/* Barre du haut */
+.barre { display: flex; align-items: center; gap: 1.2rem; min-height: 3rem; }
+.barre h1 { margin: 0; font-size: 1.75rem; font-weight: 700; flex: 1; }
+.heure { font-size: 1.2rem; font-weight: 600; color: var(--doux); }
+.pastille-profil { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--nuit2); border-radius: 2rem; padding: 0.3rem 0.9rem 0.3rem 0.3rem; font-weight: 700; font-size: 1rem; }
+.enfants .pastille-profil { background: var(--foret2); }
+.pastille-profil svg { width: 2rem; height: 2rem; }
+
+/* Indices des touches */
+.indices { display: flex; gap: 2rem; color: var(--indice); font-size: 0.95rem; margin-top: 0.8rem; min-height: 1.4rem; }
+.enfants .indices { color: var(--doux-foret); }
+@media (hover: hover) and (pointer: fine), (max-width: 760px) { .indices { display: none; } }
+
+/* Élément sélectionnable : +10 %, contour blanc décalé, halo, 160 ms */
+.nav { position: relative; transition: transform var(--focus-duree) ease, box-shadow var(--focus-duree) ease; outline: none; }
+.nav:focus, .nav:focus-visible { transform: scale(1.1); z-index: 2; box-shadow: 0 0 0 0.17rem var(--nuit), 0 0 0 0.34rem var(--blanc), 0 0 1.4rem 0.6rem rgba(255,255,255,0.18); }
+.enfants .nav:focus { box-shadow: 0 0 0 0.17rem var(--foret), 0 0 0 0.34rem var(--blanc), 0 0 1.4rem 0.6rem rgba(255,255,255,0.18); }
+@media (hover: hover) and (pointer: fine) { .nav:hover { transform: scale(1.05); } }
+
+/* Tuiles */
+.tuile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left; border-radius: var(--rayon); padding: 1rem; color: var(--encre); font-weight: 800; font-size: 1.6rem; min-height: 6rem; }
+.tuile svg { width: 2.6rem; height: 2.6rem; }
+.tuile .sous { font-size: 1rem; font-weight: 600; opacity: 0.85; }
+.accueil-grille { flex: 1; display: grid; grid-template-columns: 1.3fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1.6rem; padding: 2.4rem 2rem; min-height: 0; }
+.accueil-grille .principale { grid-row: span 2; font-size: 2.4rem; }
+.accueil-grille .principale svg { width: 5rem; height: 5rem; }
+.enfants-grille { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; padding: 2.4rem 2rem; min-height: 0; }
+.enfants-grille .tuile { font-size: 2.2rem; align-items: center; justify-content: center; gap: 1rem; text-align: center; }
+.enfants-grille .tuile svg { width: 6rem; height: 6rem; }
+.sortir { position: absolute; right: var(--marge-h); bottom: var(--marge-v); background: var(--foret2); color: var(--blanc); border-radius: 1rem; padding: 0.6rem 1.2rem; font-size: 1.1rem; font-weight: 700; display: flex; gap: 0.6rem; align-items: center; }
+.sortir svg { width: 1.4rem; height: 1.4rem; }
+
+/* Boutons */
+.bouton { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; border-radius: 0.67rem; padding: 0.8rem 1.6rem; font-weight: 700; font-size: 1.2rem; min-height: 3rem; background: var(--nuit3); color: var(--blanc); }
+.bouton.principal { background: var(--citron); color: var(--encre); font-size: 1.5rem; padding: 1rem 2.2rem; }
+.bouton svg { width: 1.4rem; height: 1.4rem; }
+.boutons { display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; margin-top: 1.4rem; }
+
+/* Messages */
+.message { font-size: 1.6rem; font-weight: 600; color: var(--doux); max-width: 40rem; line-height: 1.35; margin: 0.8rem auto; }
+.message.grand { font-size: 2rem; color: var(--blanc); font-weight: 700; }
+.bandeau-info { background: var(--ciel); color: var(--encre); border-radius: var(--rayon); padding: 0.8rem 1.2rem; font-weight: 600; font-size: 1.1rem; }
+
+/* Qui regarde ? */
+.profils { flex: 1; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 1.6rem 2.4rem; }
+.profil { width: 9rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; border-radius: 1rem; padding: 0.6rem; }
+.profil svg, .profil .plus { width: 7rem; height: 7rem; }
+.profil .plus { border-radius: 50%; background: var(--nuit3); display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 800; }
+.profil .prenom { font-size: 1.3rem; font-weight: 700; }
+.pastille-enfants { background: var(--feuille); color: var(--encre); border-radius: 1rem; padding: 0.1rem 0.7rem; font-size: 0.9rem; font-weight: 700; }
+
+/* Connexion */
+.code-rapide { font-size: 4rem; font-weight: 800; letter-spacing: 0.3em; background: var(--nuit2); border-radius: 1rem; padding: 0.6rem 1.6rem 0.6rem 2.2rem; margin: 1rem auto; display: inline-block; }
+.champ { display: flex; flex-direction: column; gap: 0.3rem; text-align: left; width: min(28rem, 100%); margin: 0.5rem auto; font-size: 1rem; color: var(--doux); }
+.champ input { background: var(--nuit2); color: var(--blanc); border: 0.1rem solid var(--nuit3); border-radius: 0.6rem; padding: 0.7rem 0.9rem; font-size: 1.3rem; min-height: 3rem; }
+.champ input:focus { outline: 0.17rem solid var(--blanc); outline-offset: 0.2rem; }
+
+/* Télé en direct */
+.onglets { display: flex; gap: var(--entre); margin: 0.6rem 0 0.4rem; padding: 0.5rem 0.4rem; }
+.onglet { flex: 1; border-radius: 0.8rem; padding: 0.6rem 1rem; font-weight: 700; font-size: 1.2rem; color: var(--encre); opacity: 0.55; }
+.onglet.actif { opacity: 1; }
+.grille-chaines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6rem; }
+.carte-chaine { display: flex; flex-direction: column; text-align: left; background: var(--nuit2); border-radius: var(--rayon-carte); overflow: hidden; min-height: 9.5rem; }
+.carte-chaine .zone-logo .grand-numero { font-size: 2.6rem; }
+.carte-chaine .zone-logo { height: 5rem; display: flex; align-items: center; justify-content: center; position: relative; color: var(--encre); font-weight: 800; font-size: 1.6rem; }
+.carte-chaine .zone-logo img { max-height: 3.6rem; max-width: 70%; object-fit: contain; }
+.carte-chaine .numero { position: absolute; left: 0.6rem; top: 0.4rem; background: rgba(18,14,54,0.85); color: var(--blanc); border-radius: 0.4rem; padding: 0 0.4rem; font-size: 0.9rem; font-weight: 700; }
+.carte-chaine .nom { font-weight: 700; font-size: 1.15rem; padding: 0.5rem 0.8rem 0; }
+.carte-chaine .maintenant { font-size: 0.9rem; color: var(--doux); padding: 0.2rem 0.8rem 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Lecteur plein écran */
+.lecteur { position: absolute; inset: 0; background: #000; padding: 0; }
+.lecteur.nav:focus, .lecteur.nav:focus-visible { transform: none; box-shadow: none; }
+.lecteur video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.lecteur video::cue { font-size: 1.8rem; background: rgba(0,0,0,0.75); }
+.nom-chaine { position: absolute; left: var(--marge-h); top: var(--marge-v); background: rgba(18,14,54,0.9); border-radius: 0.8rem; padding: 0.6rem 1.2rem; font-weight: 700; font-size: 1.5rem; }
+.chargement-video { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: var(--doux); pointer-events: none; }
+.bandeau { position: absolute; left: var(--marge-h); right: var(--marge-h); bottom: var(--marge-v); background: rgba(18,14,54,0.95); border-radius: var(--rayon); padding: 1.2rem 1.4rem; display: grid; grid-template-columns: 1fr auto; gap: 1rem 2rem; align-items: center; }
+.bandeau .titre-chaine { font-weight: 800; font-size: 1.5rem; }
+.bandeau .ligne-prog { font-size: 1.15rem; color: var(--doux); margin-top: 0.35rem; }
+.bandeau .ligne-prog b { color: var(--blanc); }
+.progression { height: 0.4rem; background: var(--nuit3); border-radius: 0.2rem; margin-top: 0.6rem; overflow: hidden; }
+.progression > div { height: 100%; background: var(--corail); }
+.bandeau .actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Programme */
+.ligne-programme { display: grid; grid-template-columns: 12rem 1fr 1fr 1fr; gap: 1rem; align-items: center; text-align: left; background: var(--nuit2); border-radius: var(--rayon-carte); padding: 0.8rem 1rem; margin-bottom: 0.7rem; width: 100%; font-size: 1rem; }
+.ligne-programme .nom { font-weight: 700; font-size: 1.15rem; }
+.ligne-programme .etiquette { color: var(--indice); font-size: 0.85rem; display: block; }
+
+/* Films, favoris, reprendre */
+.rangee { margin-bottom: 1.2rem; }
+.rangee h2 { margin: 0 0 0.6rem; font-size: 1.3rem; font-weight: 700; color: var(--doux); }
+.affiches { display: flex; gap: var(--entre); overflow-x: auto; padding: 0.8rem 0.6rem; scrollbar-width: none; }
+.affiches::-webkit-scrollbar { display: none; }
+.affiche { flex: 0 0 10rem; display: flex; flex-direction: column; gap: 0.4rem; text-align: left; }
+.affiche .image { width: 10rem; height: 15rem; border-radius: var(--rayon-carte); background: var(--nuit3) center/cover no-repeat; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--doux); font-size: 1.3rem; padding: 0.6rem; text-align: center; }
+.affiche .titre { font-size: 1rem; font-weight: 600; line-height: 1.2; max-height: 2.4em; overflow: hidden; }
+.grille-favoris { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--entre); padding: 0.6rem; }
+.cartes-reprendre { display: flex; gap: 1.4rem; overflow-x: auto; padding: 1rem 0.6rem; scrollbar-width: none; }
+.carte-reprendre { flex: 0 0 22rem; text-align: left; background: var(--nuit2); border-radius: var(--rayon); overflow: hidden; }
+.carte-reprendre .image { height: 12rem; background: var(--nuit3) center/cover no-repeat; }
+.carte-reprendre .texte { padding: 0.8rem 1rem; }
+.carte-reprendre .titre { font-weight: 700; font-size: 1.25rem; }
+.carte-reprendre .reste { color: var(--doux); font-size: 1rem; margin-top: 0.3rem; }
+
+/* Fiche vidéo */
+.fiche { flex: 1; display: grid; grid-template-columns: 16rem 1fr; gap: 2.4rem; align-items: center; padding: 1rem 0.6rem; }
+.fiche .image { width: 16rem; height: 24rem; border-radius: var(--rayon); background: var(--nuit3) center/cover no-repeat; }
+.fiche h2 { font-size: 2.2rem; margin: 0 0 0.6rem; }
+.fiche .resume { font-size: 1.3rem; color: var(--doux); line-height: 1.4; max-width: 36rem; }
+.fiche .duree { font-size: 1.15rem; color: var(--indice); margin: 0.8rem 0 1.4rem; }
+.fiche .boutons { justify-content: flex-start; }
+
+/* Code parent */
+.code-cases { display: flex; gap: 1rem; justify-content: center; margin: 1rem 0; }
+.code-cases span { width: 3.4rem; height: 3.8rem; border-radius: 0.8rem; background: var(--nuit2); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800; }
+.enfants .code-cases span { background: var(--foret2); }
+.pave { display: grid; grid-template-columns: repeat(3, 5.2rem); gap: 0.8rem; justify-content: center; }
+.pave button { height: 3.8rem; border-radius: 0.8rem; background: var(--nuit3); font-size: 1.8rem; font-weight: 800; }
+.enfants .pave button { background: var(--foret2); }
+.pave .large { font-size: 1.1rem; }
+.pave .rester { background: var(--citron); color: var(--encre); }
+
+/* Pause enfants */
+.dessin-pause svg { width: 16rem; height: 12rem; }
+
+/* Réglages */
+.liste-reglages { display: flex; flex-direction: column; gap: 0.8rem; max-width: 40rem; width: 100%; margin: 1rem auto; }
+.liste-reglages .bouton { justify-content: flex-start; }
+.petit { font-size: 0.95rem; color: var(--indice); }
+
+/* Téléphones et petites fenêtres */
+@media (max-width: 760px) {
+  :root { --marge-h: 1rem; --marge-v: 1rem; }
+  html { font-size: 13px; }
+  body { overflow: auto; }
+  .ecran { overflow-y: auto; }
+  .accueil-grille { grid-template-columns: 1fr 1fr; grid-template-rows: none; grid-auto-rows: minmax(7.5rem, auto); }
+  .accueil-grille .principale { grid-row: auto; grid-column: span 2; min-height: 10rem; }
+  .enfants-grille { grid-template-columns: 1fr; }
+  .grille-chaines { grid-template-columns: 1fr 1fr; }
+  .onglets { overflow-x: auto; }
+  .onglet { flex: 0 0 auto; }
+  .ligne-programme { grid-template-columns: 1fr; gap: 0.3rem; }
+  .fiche { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .fiche .boutons { justify-content: center; }
+  .sortir { position: static; align-self: flex-end; margin-top: 1rem; }
+  .bandeau { grid-template-columns: 1fr; }
+  .bandeau .actions { justify-content: flex-start; }
+  .nav:focus { transform: none; }
+}

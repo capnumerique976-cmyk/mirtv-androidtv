@@ -49,3 +49,21 @@ test('le site est servi en HTTPS avec les en-têtes de sécurité', async ({ req
   expect(h['x-content-type-options']).toBe('nosniff');
   expect(h['server']).toBeUndefined();
 });
+
+test('l’appli web MirTV est en ligne à /tv/ et s’installe', async ({ page, request }) => {
+  const r = await page.goto('/tv/');
+  expect(r.status()).toBe(200);
+  await expect(page).toHaveTitle('MirTV');
+  await expect(page.getByRole('heading', { name: 'Qui regarde ?' })).toBeVisible();
+  const m = await (await request.get('/tv/manifest.webmanifest')).json();
+  expect(m.name).toBe('MirTV');
+  expect((await request.get('/tv/sw.js')).status()).toBe(200);
+  const texte = await page.locator('body').innerText();
+  expect(texte).not.toMatch(/jellyfin|serveur|iptv|stream/i);
+});
+
+test('l’adresse principale ouvre l’appli web', async ({ request }) => {
+  const r = await request.get('/', { maxRedirects: 0 });
+  expect([301, 302, 307, 308]).toContain(r.status());
+  expect(r.headers()['location']).toMatch(/\/tv\/$/);
+});

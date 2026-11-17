@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - mirtv
+    paths:
+      - 'mirtv/pwa/**'
+      - 'mirtv/tests-web/**'
+      - '.github/workflows/mirtv-tests-web.yaml'
   workflow_dispatch:
   schedule:
     - cron: '17 3 * * *'

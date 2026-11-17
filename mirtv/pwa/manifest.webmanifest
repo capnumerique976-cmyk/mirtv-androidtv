@@ -1,0 +1,20 @@
+{
+  "name": "MirTV",
+  "short_name": "MirTV",
+  "description": "La télé et les vidéos MirTV",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "id": "/tv/",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#120E36",
+  "theme_color": "#120E36",
+  "categories": ["entertainment"],
+  "icons": [
+    { "src": "icons/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
