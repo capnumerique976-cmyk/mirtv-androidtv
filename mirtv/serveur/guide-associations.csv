@@ -1,0 +1,7 @@
+# Chaînes MirTV dont le nom diffère dans les guides gratuits : nom MirTV;identifiant dans la source
+# (trouvés avec : python3 guide-mirtv.py --chercher mot1 mot2…)
+TV5Monde Info;TV5MondeInfo.fr
+ViàTéléPaese;TelePaese.fr
+Vosges Télévision;VosgesTV.fr
+TV5MONDE Chefs;TV5.Monde+.Chefs.us
+Africanews (anglais);UK:.Africanews.be

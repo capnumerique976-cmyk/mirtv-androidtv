@@ -49,7 +49,7 @@ def norm(s):
     s = re.sub(r"\((francais|french|fr)\)", " fr ", s)
     s = re.sub(r"\((anglais|english|en)\)", " en ", s)
     s = re.sub(r"\.(fr|com|tv|uk|us|be|ch|ca)\b", " ", s)
-    s = re.sub(r"\b(hd|sd|fhd|uhd|tv|channel|chaine|direct|live)\b", " ", s)
+    s = re.sub(r"\b(hd|sd|fhd|uhd|tv|television|tele|channel|chaine|direct|live)\b", " ", s)
     s = re.sub(r"[^a-z0-9]+", " ", s)
     return " ".join(s.split())
 
@@ -123,16 +123,16 @@ def main(rapport_seul=False):
                 if el.tag == "channel":
                     cid_s = el.get("id")
                     ids_source.add(cid_s)
-                    for dn in el.findall("display-name"):
-                        index.setdefault(norm(dn.text), cid_s)
-                    index.setdefault(norm(cid_s), cid_s)
+                    for n in [dn.text for dn in el.findall("display-name")] + [cid_s]:
+                        index.setdefault(norm(n), cid_s)
+                        index.setdefault(norm(n).replace(" ", ""), cid_s)  # « TV5 Monde Info » = « TV5Monde Info »
                     el.clear()
                 elif el.tag == "programme":
                     if not pret:  # toutes les chaînes de la source sont lues : on associe
                         pret = True
                         for cid, nom in list(restant.items()):
                             src = manuel.get(nom) if manuel.get(nom) in ids_source else None
-                            for c in ([] if src else candidats(nom)):
+                            for c in ([] if src else [x for c in candidats(nom) for x in (c, c.replace(" ", ""))]):
                                 src = index.get(c)
                                 if src:
                                     break
