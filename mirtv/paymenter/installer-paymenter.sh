@@ -59,6 +59,11 @@ docker compose exec -T paymenter php artisan tinker --execute="require '/app/mir
 docker compose exec -T paymenter php artisan tinker --execute="require '/app/mirtv/creer-admin.php';"
 docker compose exec -T paymenter php artisan optimize:clear >/dev/null
 
+# 6 bis. Garde des écrans : limite propre à chaque famille payante
+for g in /opt/mirtv/garde/garde.py "$HOME/mirtv/scripts/mirtv-garde/garde.py"; do
+  [ -f "$g" ] && sudo python3 "$ICI/garde-limites.py" "$g" || true
+done
+
 # 7. Caddy : site compte.mirtv.rahiss.com (une seule fois)
 if ! sudo grep -q "compte-mirtv" "$CADDY"; then
   sudo cp "$CADDY" "$CADDY.avant-compte"
