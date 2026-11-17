@@ -113,6 +113,17 @@ def candidats(nom, registre, chaines_api, par_id, par_nom, etat):
         trouves = sorted(trouves, key=lambda c: (c.get("country") != "FR", c.get("closed") is not None))
         ident = trouves[0]["id"] if trouves else None
     entrees = list(par_id.get(ident, [])) if ident else []
+
+    def decl(e):
+        return e["xmltv_id"].split("@")[1].lower() if "@" in e["xmltv_id"] else ""
+
+    # Bonne déclinaison seulement : Eurosport Italie n'a pas les mêmes programmes qu'Eurosport France
+    if feed:
+        f = feed.lower()
+        entrees = [e for e in entrees if decl(e) in ("", f) or (f in ("sd", "hd") and decl(e) in ("sd", "hd"))]
+    else:
+        permis = {"", "sd", "hd", FEED_LANGUE.get(langue, "")} | ({"france"} if langue == "fr" else set())
+        entrees = [e for e in entrees if decl(e) in permis]
     if not entrees:  # pas d'identifiant connu : le nom tel qu'il est écrit sur les sites
         entrees = [e for e in par_nom.get(norm(nom), []) + par_nom.get(norm(base), []) if e["lang"] in (langue, "")]
     vus, uniques = set(), []
@@ -123,9 +134,8 @@ def candidats(nom, registre, chaines_api, par_id, par_nom, etat):
             uniques.append(e)
 
     def rang(e):
-        f = e["xmltv_id"].split("@")[1].lower() if "@" in e["xmltv_id"] else ""
-        bonne_decl = (feed and f == feed.lower()) or (not feed and f in ("", "sd", "hd", FEED_LANGUE.get(langue, "")))
-        return (etat.get(e["site"]) != "🟢", e["lang"] != langue, not bonne_decl, e["site"])
+        exacte = decl(e) == (feed or "").lower()
+        return (etat.get(e["site"]) != "🟢", e["lang"] != langue, not exacte, e["site"])
 
     uniques.sort(key=rang)
     # un seul choix par site : passer à un autre site est plus utile qu'une autre page du même site
