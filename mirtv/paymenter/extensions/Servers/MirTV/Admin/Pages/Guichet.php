@@ -69,6 +69,7 @@ class Guichet extends PageMirTV
             [$mode === 'production', $mode === 'production' ? 'Paiements Orange en production (vrai argent)' : 'Passer Orange Money en production (aujourd\'hui : ' . $mode . ')', CompteOrange::getUrl(), 'Compte Orange'],
             [Reglages::whatsapp() !== '', 'Indiquer le numéro WhatsApp de l\'aide', AideWhatsapp::getUrl(), 'WhatsApp'],
             [!$test, 'Mettre les vrais noms et prix des formules (enlever « (TEST) »)', Formules::getUrl(), 'Formules'],
+            [Facturation::infosCompletes(), 'Mettre vos informations sur les factures (adresse, NIF, STAT)', Facturation::getUrl(), 'Facturation'],
             [!$familleTest, 'Effacer la famille de test (commande : famille-test.sh supprimer)', Familles::getUrl(), 'Familles'],
             [$nom && strcasecmp($nom, 'Paymenter') !== 0, 'Nom du portail des comptes : « MirTV »', Appli::getUrl(), 'Appli'],
             [$mails, 'Facultatif : envoyer les reçus par e-mail (serveur d\'envoi à régler)', '/admin/settings', 'Réglages du portail'],
@@ -89,6 +90,7 @@ class Guichet extends PageMirTV
         $total = (int) (clone $mois)->sum('amount');
         $jf = self::jellyfinOk();
         $annonce = (bool) Reglages::mirtv('annonce_active', false);
+        $aRelancer = Relances::aRelancer(3)->count();
         $produit = Formules::produit();
         $nbFormules = $produit ? $produit->plans()->count() : 0;
         $minPrix = $produit ? (int) DB::table('prices')->whereIn('plan_id', $produit->plans()->pluck('id'))->where('currency_code', 'MGA')->min('price') : 0;
@@ -104,6 +106,7 @@ class Guichet extends PageMirTV
             . $pastille(($n['active'] ?? 0) . ' famille(s) active(s) · ' . ($n['pause'] ?? 0) . ' en pause', '#ff7a00')
             . $pastille('Ce mois : ' . number_format($total, 0, ',', ' ') . ' Ar reçus', '#22c55e')
             . $pastille($jf ? 'Télé (Jellyfin) : en marche' : 'Télé (Jellyfin) : ne répond pas', $jf ? '#22c55e' : '#ef4444')
+            . ($aRelancer ? $pastille($aRelancer . ' famille(s) à relancer', '#f59e0b') : '')
             . ($annonce ? $pastille('Message affiché sur les écrans', '#3b82f6') : '')
             . '</div>';
 
@@ -129,10 +132,12 @@ class Guichet extends PageMirTV
             $carte('🟠', 'Compte marchand Orange Money', 'Les 3 clés d\'Orange, le mode (simulation, sandbox, production), le test des clés.', CompteOrange::getUrl(), 'Mode : ' . $mode),
             $carte('🏷️', 'Formules et prix', 'Semaine, mois, trimestre, année : noms, prix en ariary, écrans par famille.', Formules::getUrl(), $nbFormules . ' formule(s)' . ($minPrix ? ' · dès ' . number_format($minPrix, 0, ',', ' ') . ' Ar' : '')),
             $carte('💰', 'Paiements reçus', 'Chaque paiement Orange Money : payé, en attente, échoué. Totaux du jour et du mois.', Paiements::getUrl(), number_format($total, 0, ',', ' ') . ' Ar ce mois'),
-            $carte('🧾', 'Factures', 'Toutes les factures du portail (Paymenter).', '/admin/invoice/invoices'),
+            $carte('🧾', 'Facturation', 'Vos informations sur les factures (NIF, STAT, adresse), numéros des factures.', Facturation::getUrl(), Facturation::infosCompletes() ? 'Informations complètes' : 'À compléter'),
+            $carte('📄', 'Factures', 'Toutes les factures : voir, télécharger en PDF, marquer payée.', '/admin/invoice/invoices'),
         ])
         . $groupe('Familles et clients', [
             $carte('👨‍👩‍👧', 'Familles abonnées', 'État, échéance, pause, réactivation, jours offerts, écrans, code d\'activation, lien de paiement.', Familles::getUrl(), ($n['active'] ?? 0) . ' active(s)'),
+            $carte('🔔', 'Relances WhatsApp', 'Familles dont l\'abonnement se termine ou est en pause : un clic, le message est prêt.', Relances::getUrl(), $aRelancer . ' à relancer'),
             $carte('👤', 'Clients', 'Comptes des clients du portail (nom, e-mail, mot de passe oublié).', '/admin/users'),
             $carte('💬', 'Numéro WhatsApp et aide', 'Le numéro que les clients appellent depuis l\'appli et la page de paiement, horaires, langues.', AideWhatsapp::getUrl(), $wa !== '' ? Reglages::lisible($wa) : 'À régler'),
         ])

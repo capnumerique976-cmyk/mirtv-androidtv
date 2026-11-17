@@ -126,6 +126,7 @@ class CompteOrange extends PageMirTV implements HasForms
     public function content(Schema $schema): Schema
     {
         return $schema->components([
+            $this->retour(),
             $this->formulaire([
                 Action::make('tester')
                     ->label('Tester les clés')
@@ -146,7 +147,7 @@ class CompteOrange extends PageMirTV implements HasForms
                         }
                         Reglages::ecrireOrange(['mode' => 'simulation']);
                         $this->ok('Clés effacées', 'Les paiements sont en simulation.');
-                        $this->redirect(static::getUrl());
+                        $this->rediriger();
                     }),
                 Action::make('orange')
                     ->label('Portail Orange Developer')
@@ -172,16 +173,17 @@ class CompteOrange extends PageMirTV implements HasForms
             }
         }
 
+        $alertes = [];
         if ($mode !== 'simulation') {
             $manque = array_filter(array_keys(Reglages::CLES_ORANGE), fn ($n) => !Reglages::origineCle($n));
             if ($manque) {
                 $mode = $avant === 'production' ? 'production' : 'simulation';
-                $this->erreur('Mode non changé', 'Il manque des clés Orange : ' . implode(', ', array_map(fn ($n) => Reglages::CLES_ORANGE[$n], $manque)) . '.');
+                $alertes[] = 'Mode non changé : il manque des clés Orange (' . implode(', ', array_map(fn ($n) => Reglages::CLES_ORANGE[$n], $manque)) . ').';
             }
         }
         if ($mode === 'production' && $avant !== 'production' && trim((string) ($d['confirmation'] ?? '')) !== 'PRODUCTION') {
             $mode = $avant;
-            $this->erreur('Production non activée', 'Écrivez PRODUCTION (en majuscules) dans la case de confirmation.');
+            $alertes[] = 'Production non activée : écrivez PRODUCTION (en majuscules) dans la case de confirmation.';
         }
 
         Reglages::ecrireOrange([
@@ -193,8 +195,9 @@ class CompteOrange extends PageMirTV implements HasForms
             'url_publique' => rtrim(trim((string) $d['url_publique']), '/'),
         ]);
 
-        $this->ok('Enregistré', 'Mode : ' . strtoupper($mode) . ($nouvelles ? ' — ' . $nouvelles . ' clé(s) enregistrée(s).' : '.'));
-        $this->redirect(static::getUrl());
+        $resume = 'Mode : ' . strtoupper($mode) . ($nouvelles ? ' — ' . $nouvelles . ' clé(s) enregistrée(s).' : '.');
+        $alertes ? $this->erreur('Enregistré, avec une remarque', implode(' ', $alertes) . ' ' . $resume) : $this->ok('Enregistré', $resume);
+        $this->rediriger();
     }
 
     public function tester(): void

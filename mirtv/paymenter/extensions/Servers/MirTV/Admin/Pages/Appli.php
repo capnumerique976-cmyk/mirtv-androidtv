@@ -33,7 +33,7 @@ class Appli extends PageMirTV implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'ri-tv-line';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 9;
 
     public ?array $data = [];
 
@@ -96,6 +96,7 @@ class Appli extends PageMirTV implements HasForms
     public function content(Schema $schema): Schema
     {
         return $schema->components([
+            $this->retour(),
             $this->formulaire([
                 Action::make('jellyfin')
                     ->label('Tester la liaison avec Jellyfin')

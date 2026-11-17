@@ -96,6 +96,27 @@ class GuichetTest extends TestCase
         @unlink($dossier . '/orange_merchant_key');
     }
 
+    public function test_telephone_client_et_message_de_relance(): void
+    {
+        $u = \App\Models\User::factory()->create(['first_name' => 'Hery']);
+        $this->assertSame('', Reglages::telephoneClient($u));
+        $cp = \App\Models\CustomProperty::create(['key' => 'telephone', 'name' => 'Téléphone', 'type' => 'text', 'model' => \App\Models\User::class, 'non_editable' => false, 'required' => true, 'show_on_invoice' => true]);
+        foreach (['034 12 345 67' => '261341234567', '+262 639 12 34 56' => '262639123456', '261 34 12 345 67' => '261341234567', '0033 6 12 34 56 78' => '33612345678'] as $saisi => $attendu) {
+            $u->properties()->updateOrCreate(['key' => 'telephone'], ['custom_property_id' => $cp->id, 'name' => 'Téléphone', 'value' => $saisi]);
+            $this->assertSame($attendu, Reglages::telephoneClient($u->fresh()), $saisi);
+        }
+        $this->assertSame('Bonjour Hery, famille 1001 : https://x/payer/abc', Reglages::remplir('Bonjour {prenom}, famille {famille} : {lien}', ['prenom' => 'Hery', 'famille' => 1001, 'lien' => 'https://x/payer/abc']));
+    }
+
+    public function test_bloc_vendeur_des_factures(): void
+    {
+        $bloc = \Paymenter\Extensions\Servers\MirTV\Admin\Pages\Facturation::blocVendeur([
+            'facture_nom' => 'RAHISS', 'facture_adresse' => 'Lot 1', 'facture_ville' => 'Antananarivo', 'facture_nif' => '123', 'facture_stat' => '456',
+            'facture_rcs' => '', 'facture_telephone' => '+261 34 00 000 00', 'facture_email' => '', 'facture_mention' => 'TVA non applicable',
+        ]);
+        $this->assertSame("RAHISS\nLot 1\nAntananarivo\nNIF : 123 — STAT : 456\n+261 34 00 000 00\nTVA non applicable", $bloc);
+    }
+
     public function test_pages_du_guichet_reservees_aux_administrateurs(): void
     {
         $this->get('/admin/mirtv')->assertRedirect();

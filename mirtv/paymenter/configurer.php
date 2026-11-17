@@ -15,10 +15,12 @@
 use App\Helpers\ExtensionHelper;
 use App\Models\Category;
 use App\Models\Currency;
+use App\Models\CustomProperty;
 use App\Models\Gateway;
 use App\Models\Product;
 use App\Models\Server;
 use App\Models\Setting;
+use App\Models\User;
 
 $reglage = function (string $cle, $valeur, ?string $type = null, bool $toujours = true) {
     $s = Setting::where('key', $cle)->whereNull('settingable_type')->first();
@@ -50,6 +52,32 @@ $reglage('cronjob_order_cancel', 7, 'integer');
 $reglage('tax_enabled', false, 'boolean');
 $reglage('mail_disable', true, 'boolean', false);     // pas d'e-mail tant qu'aucun serveur d'envoi n'est réglé
 $reglage('mail_must_verify', false, 'boolean');
+
+// 1 bis. Factures : numéros MIRTV-2026-0001, attribués seulement au paiement (pas de trou), logo MirTV
+$format = Setting::where('key', 'invoice_number_format')->whereNull('settingable_type')->value('value');
+if (!$format || $format === 'INV-{number}') {
+    $reglage('invoice_number_format', 'MIRTV-{year}-{number}');
+    $reglage('invoice_number_padding', 4, 'integer');
+    $reglage('invoice_proforma', true, 'boolean');
+}
+$reglage('bill_to_text', 'MirTV', null, false);
+foreach (['logo' => 'mirtv-logo-clair.png', 'logo_dark' => 'mirtv-logo-sombre.png'] as $cle => $fichier) {
+    if (is_file(storage_path('app/public/' . $fichier))) {
+        $reglage($cle, $fichier, null, false);
+    }
+}
+
+// 1 ter. Téléphone WhatsApp du client : demandé à l'inscription, imprimé sur les factures, sert aux relances
+CustomProperty::firstOrCreate(['key' => 'telephone'], [
+    'name' => 'Téléphone (WhatsApp)',
+    'description' => 'Pour l\'aide et les rappels de paiement. Exemple : 034 12 345 67',
+    'type' => 'text',
+    'model' => User::class,
+    'validation' => 'regex:/^[0-9 +().-]{8,20}$/',
+    'non_editable' => false,
+    'required' => true,
+    'show_on_invoice' => true,
+]);
 
 // 2. Monnaie : ariary
 Currency::updateOrCreate(['code' => 'MGA'], ['name' => 'Ariary', 'prefix' => null, 'suffix' => ' Ar', 'format' => '1 000,00']);

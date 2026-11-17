@@ -17,6 +17,7 @@ class Famille extends Model
     protected $casts = [
         'code_expire_at' => 'datetime',
         'resiliee_at' => 'datetime',
+        'relance_at' => 'datetime',
     ];
 
     public function service()

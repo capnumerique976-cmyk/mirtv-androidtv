@@ -18,6 +18,8 @@ use Paymenter\Extensions\Servers\MirTV\Admin\Pages\Guichet;
  */
 abstract class PageMirTV extends Page
 {
+    use RetourMirTV;
+
     protected static string|\UnitEnum|null $navigationGroup = 'MirTV';
 
     public static function canAccess(): bool
@@ -60,11 +62,13 @@ abstract class PageMirTV extends Page
 
     protected function ok(string $titre, ?string $texte = null): void
     {
+        $this->noterRetour($titre, $texte, false);
         Notification::make()->title($titre)->body($texte)->success()->send();
     }
 
     protected function erreur(string $titre, ?string $texte = null): void
     {
+        $this->noterRetour($titre, $texte, true);
         Notification::make()->title($titre)->body($texte)->danger()->persistent()->send();
     }
 }

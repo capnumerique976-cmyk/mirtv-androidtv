@@ -42,6 +42,7 @@ cp "$ICI/mirtv-entree.sh" "$ICI/configurer.php" "$ICI/creer-admin.php" "$ICI/mod
 sudo rm -rf "$DEST/extensions/Gateways/OrangeMoney" "$DEST/extensions/Servers/MirTV"
 sudo cp -r "$ICI/extensions/Gateways/OrangeMoney" "$DEST/extensions/Gateways/"
 sudo cp -r "$ICI/extensions/Servers/MirTV" "$DEST/extensions/Servers/"
+sudo cp "$ICI"/images/mirtv-logo-*.png "$DEST/storage/public/"   # logo des factures et du portail
 
 # 5. Démarrage
 cd "$DEST"

@@ -202,6 +202,41 @@ class Reglages
         return 'https://wa.me/' . $numero . ($msg !== '' ? '?text=' . rawurlencode($msg) : '');
     }
 
+    /** Messages de relance par défaut ({prenom}, {famille}, {date}, {formule}, {prix}, {lien}). */
+    public const RELANCE = 'Bonjour {prenom}, votre abonnement MirTV (famille {famille}) se termine le {date}. Pour continuer à regarder, payez ici avec Orange Money : {lien} — Merci ! L\'équipe MirTV';
+
+    public const RELANCE_PAUSE = 'Bonjour {prenom}, votre abonnement MirTV (famille {famille}) est en pause depuis le {date}. Pour remettre la télé en marche, payez ici avec Orange Money : {lien} — L\'équipe MirTV';
+
+    /** Téléphone d'un client (propriété « telephone » du compte), en chiffres avec l'indicatif, ou ''. */
+    public static function telephoneClient($user): string
+    {
+        if (!$user) {
+            return '';
+        }
+        $brut = (string) ($user->properties()->where('key', 'telephone')->value('value') ?? '');
+        $c = preg_replace('/\D/', '', $brut);
+        if ($c === '') {
+            return '';
+        }
+        if (str_starts_with(trim($brut), '+') || str_starts_with($c, '00')) {
+            return ltrim($c, '0');
+        }
+        foreach (array_keys(self::INDICATIFS) as $ind) {
+            if (str_starts_with($c, (string) $ind) && strlen($c) > strlen((string) $ind) + 6) {
+                return $c;
+            }
+        }
+
+        // Numéro local (ex. 034 12 345 67) : indicatif de l'aide MirTV, Madagascar par défaut
+        return self::decouper(self::whatsapp())[0] . ltrim($c, '0');
+    }
+
+    /** Remplit un modèle de message. */
+    public static function remplir(string $modele, array $valeurs): string
+    {
+        return strtr($modele, collect($valeurs)->mapWithKeys(fn ($v, $k) => ['{' . $k . '}' => (string) $v])->all());
+    }
+
     /** Réglages publics lus par l'appli (aucune donnée sensible). */
     public static function publics(): array
     {

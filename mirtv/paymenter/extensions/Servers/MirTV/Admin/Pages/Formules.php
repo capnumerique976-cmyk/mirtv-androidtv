@@ -114,6 +114,7 @@ class Formules extends PageMirTV implements HasForms
         $p = self::produit();
 
         return $schema->components([
+            $this->retour(),
             $this->formulaire($p ? [
                 Action::make('avance')
                     ->label('Réglages avancés (ajouter une formule, durées)')
@@ -144,6 +145,6 @@ class Formules extends PageMirTV implements HasForms
         $p->settings()->updateOrCreate(['key' => 'ecrans'], ['value' => (int) $d['ecrans'], 'type' => 'integer']);
         $p->settings()->updateOrCreate(['key' => 'profils_enfants'], ['value' => (int) $d['profils_enfants'], 'type' => 'integer']);
         $this->ok('Formules enregistrées');
-        $this->redirect(static::getUrl());
+        $this->rediriger();
     }
 }

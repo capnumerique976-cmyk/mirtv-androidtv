@@ -98,6 +98,7 @@ class AideWhatsapp extends PageMirTV implements HasForms
     public function content(Schema $schema): Schema
     {
         return $schema->components([
+            $this->retour(),
             $this->formulaire([
                 Action::make('tester')
                     ->label('Essayer le lien WhatsApp')

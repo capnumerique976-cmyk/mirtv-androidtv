@@ -36,7 +36,7 @@ class Familles extends PageMirTV implements HasTable
 
     protected static string|\BackedEnum|null $navigationIcon = 'ri-team-line';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     public const STATUTS = [
         'active' => 'Active',
@@ -52,6 +52,7 @@ class Familles extends PageMirTV implements HasTable
         $carte = fn ($titre, $valeur, $couleur) => '<div style="flex:1;min-width:150px;padding:14px 16px;border-radius:12px;background:rgba(127,127,127,.08);border-left:4px solid ' . $couleur . '"><div style="font-size:12px;opacity:.7">' . e($titre) . '</div><div style="font-size:26px;font-weight:700">' . (int) $valeur . '</div></div>';
 
         return $schema->components([
+            $this->retour(),
             Html::make('<div style="display:flex;gap:12px;flex-wrap:wrap">'
                 . $carte('Actives', $n['active'] ?? 0, '#22c55e')
                 . $carte('En pause (impayé)', $n['pause'] ?? 0, '#f59e0b')
@@ -79,7 +80,7 @@ class Familles extends PageMirTV implements HasTable
                 TextColumn::make('client')
                     ->label('Client')
                     ->state(fn (Famille $f) => trim(($f->service?->user?->first_name ?? '') . ' ' . ($f->service?->user?->last_name ?? '')) ?: '—')
-                    ->description(fn (Famille $f) => $f->service?->user?->email)
+                    ->description(fn (Famille $f) => implode(' · ', array_filter([$f->service?->user?->email, ($t = \Paymenter\Extensions\Servers\MirTV\Reglages::telephoneClient($f->service?->user)) !== '' ? \Paymenter\Extensions\Servers\MirTV\Reglages::lisible($t) : null])))
                     ->searchable(query: fn (Builder $q, string $s) => $q->whereHas('service.user', fn ($u) => $u->where('email', 'like', "%{$s}%")->orWhere('first_name', 'like', "%{$s}%")->orWhere('last_name', 'like', "%{$s}%"))),
                 TextColumn::make('formule')->label('Formule')->state(fn (Famille $f) => $f->service?->plan?->name ?? '—'),
                 TextColumn::make('statut')
