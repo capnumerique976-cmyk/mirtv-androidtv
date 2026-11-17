@@ -660,8 +660,9 @@
             ${tuileImage("aide", t("tuile_aide"), "", P.aide, "var(--citron)", "art-aide")}
           </div>
           <section class="rangee-direct" hidden><h2><span class="point-direct"></span>${echap(t("accueil_en_direct"))}</h2><div class="cartes-direct"></div></section>
-          <div class="boutons" data-installer hidden style="margin-top:0"><button class="bouton nav" data-cle="installer">${echap(t("installer_appli"))}</button></div>
           ${indices(["indice_fleches_choisir", "indice_ok_ouvrir"])}</section>`);
+        // « Installer MirTV » : petit bouton dans la barre du haut (n'apparaît que si le navigateur le propose)
+        e.querySelector(".barre .heure").before(el(`<button class="bouton bouton-accueil nav" data-cle="installer" data-installer hidden aria-label="${echap(t("installer_appli"))}">${P.tele}<span class="libelle">${echap(t("installer_appli"))}</span></button>`));
         const go = (cle, f) => e.querySelector(`[data-cle="${cle}"]`).addEventListener("click", f);
         go("tele", () => montrer(ecranTele()));
         go("reprendre", () => montrer(ecranReprendre()));
