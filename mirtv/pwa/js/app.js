@@ -477,18 +477,20 @@
         const e = el(`<section class="ecran ecran-centre">${barre(t("connexion_titre"), false)}
           <form style="flex:1;display:flex;flex-direction:column;justify-content:center;width:100%" autocomplete="on">
             <label class="champ">${echap(t("connexion_nom"))}<input class="nav" data-cle="nom" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
-            <label class="champ">${echap(t("connexion_mot_de_passe"))}<input class="nav" data-cle="mdp" name="password" type="password" autocomplete="current-password"></label>
+            <label class="champ">${echap(t("connexion_mot_de_passe"))}<input class="nav" data-cle="mdp" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
+            <label class="champ" style="flex-direction:row;align-items:center;gap:0.6rem"><input type="checkbox" class="nav" data-cle="voir" style="width:1.4rem;height:1.4rem;min-height:0"> ${echap(t("connexion_voir_mot_de_passe"))}</label>
             <p class="message" data-erreur hidden></p>
             <div class="boutons"><button class="bouton principal nav" data-cle="ok" type="submit">${echap(t("bouton_se_connecter") || t("connexion_titre"))}</button><button class="bouton nav" type="button" data-cle="annuler">${echap(t("bouton_annuler"))}</button></div>
           </form>${indices(["indice_retour"])}</section>`);
         const f = e.querySelector("form");
         e.querySelector('[data-cle="annuler"]').addEventListener("click", () => reculer());
+        e.querySelector('[data-cle="voir"]').addEventListener("change", ev => { f.password.type = ev.target.checked ? "text" : "password"; });
         f.addEventListener("submit", async ev => {
           ev.preventDefault();
           const zone = e.querySelector("[data-erreur]");
           zone.hidden = true;
           try {
-            const res = await api("/Users/AuthenticateByName", { method: "POST", jeton: null, corps: { Username: f.username.value.trim(), Pw: f.password.value } });
+            const res = await api("/Users/AuthenticateByName", { method: "POST", jeton: null, corps: { Username: f.username.value.trim(), Pw: f.password.value.replace(/^\s+|\s+$/g, "") } });
             connecte(res);
           } catch (err) {
             if (err instanceof ErreurApi && err.tropDEcrans) return montrer(ecranTropDEcrans());

@@ -124,7 +124,8 @@ window.MIRTV_TEXTES = {
   "mes_ecrans_vide": "Aucun autre écran ouvert.",
   "installer_appli": "Installer MirTV sur cet appareil",
   "profil_description": "Profil de %1$s",
-  "bouton_se_connecter": "Se connecter"
+  "bouton_se_connecter": "Se connecter",
+  "connexion_voir_mot_de_passe": "Afficher le mot de passe"
  },
  "mg": {
   "app_nom": "MirTV",

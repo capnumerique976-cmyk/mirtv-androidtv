@@ -15,8 +15,8 @@ async function connexion(page, nom, mdp = 'test') {
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await page.getByRole('button', { name: 'Utiliser le nom et le mot de passe' }).click();
   await page.getByLabel('Nom du compte').fill(nom);
-  await page.getByLabel('Mot de passe').fill(mdp);
-  await page.getByLabel('Mot de passe').press('Enter');
+  await page.getByLabel('Mot de passe', { exact: true }).fill(mdp);
+  await page.getByLabel('Mot de passe', { exact: true }).press('Enter');
 }
 async function sansMotInterdit(page) {
   const texte = (await page.locator('#app').innerText()).replace(/Basé sur Jellyfin[^.]*\./g, '');
@@ -148,6 +148,18 @@ test('Mes favoris vide : message et « Voir la télé en direct »', async ({ pa
   await expect(page.getByText('Pas encore de favori.')).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Télé en direct' })).toBeVisible();
+});
+
+test('connexion : espaces copiés par erreur autour du mot de passe acceptés, case « Afficher »', async ({ page }) => {
+  await neuf(page);
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await page.getByRole('button', { name: 'Utiliser le nom et le mot de passe' }).click();
+  await page.getByLabel('Nom du compte').fill(' f1-parent ');
+  await page.getByLabel('Mot de passe', { exact: true }).fill('  test \n');
+  await page.getByLabel('Afficher le mot de passe').check();
+  await expect(page.getByLabel('Mot de passe', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByLabel('Mot de passe', { exact: true }).press('Enter');
+  await expect(page.locator('[data-cle="tele"]')).toBeFocused();
 });
 
 test('trop d’écrans : jamais « mot de passe incorrect »', async ({ page }) => {
