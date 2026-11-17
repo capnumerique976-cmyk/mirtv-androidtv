@@ -222,6 +222,97 @@ def retirer():
     return 0
 
 
+
+def resultats(fichier):
+    """Lit le résultat du test de lecture (1re ligne : liste JSON des raisons ; puis « n,choisi,2e essai,hauteur,
+    hauteur max,ms,raisons » séparés par « ; »), ajoute les chaînes qui marchent et écrit le rapport."""
+    with open(fichier, encoding="utf-8") as f:
+        codes = json.loads(f.readline())
+        brut = f.read().replace("\n", "")
+    with open(os.path.join(DEST, "candidats.json"), encoding="utf-8") as f:
+        cand = {x["n"]: x for x in json.load(f)}
+    with open(os.path.join(DEST, "bilan.json"), encoding="utf-8") as f:
+        bilan = json.load(f)
+    lignes = []
+    for r in [r for r in brut.split(";") if r]:
+        n, choisi, deux, h, hmax, ms, raisons = r.split(",")
+        x = cand[int(n)]
+        lignes.append({"n": int(n), "nom": x["nom"], "choisi": int(choisi), "deuxieme": deux == "1", "hauteur": int(h),
+                       "hmax": int(hmax), "ms": int(ms), "flux": x["flux"],
+                       "raisons": [codes[int(c)] for c in raisons.split(".") if c != ""]})
+    ok = [l for l in lignes if l["choisi"]]
+    ko = [l for l in lignes if not l["choisi"]]
+    ajouter(",".join(f"{l['n']}:{l['choisi']}" for l in ok))
+
+    from collections import Counter
+    par_cat = Counter(l["flux"][l["choisi"] - 1]["categorie"] for l in ok)
+    causes = Counter(l["raisons"][-1] if l["raisons"] else "inconnue" for l in ko)
+    qual = Counter("1080p et plus" if max(l["hmax"], l["hauteur"]) >= 1080 else "720p" if max(l["hmax"], l["hauteur"]) >= 720
+                   else "moins de 720p" for l in ok)
+    adaptatifs = sum(1 for l in ok if l["hmax"])
+    temps = sorted(l["ms"] for l in ok)
+    mediane = temps[len(temps) // 2] if temps else 0
+    pays = Counter(l["flux"][l["choisi"] - 1]["pays"] or "?" for l in ok)
+    jour = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    md = [f"# Import de test iptv-org — {jour}", "",
+          "## Résumé", "",
+          f"- Base iptv-org : {bilan['chaines_total']} chaînes, {bilan['flux_total']} flux.",
+          f"- Filtre (pays FR ou langue française, pas pour adultes, chaîne en activité) : **{bilan['chaines_filtrees']} chaînes**, {bilan['flux_des_chaines']} flux.",
+          f"- Écartés avant le test : {bilan['ecartes_http']} flux en http (non sécurisés), {bilan['ecartes_referrer_user_agent']} flux qui exigent un « referrer » ou un « user-agent » (impossible depuis un navigateur), {bilan['ecartes_deja_dans_mirtv']} déjà dans MirTV.",
+          f"- Testées dans un vrai navigateur (Chrome, hls.js comme l'appli, depuis https://mirtv.rahiss.com) : **{len(lignes)} chaînes** ({bilan['flux_candidats']} flux https).",
+          f"- **Lisibles : {len(ok)}** (dont {sum(1 for l in ok if l['deuxieme'])} au 2e essai) — **ajoutées à MirTV** en statut « essai » (TEST INTERNE). **Illisibles : {len(ko)}** — écartées.",
+          f"- Démarrage médian : {mediane / 1000:.1f} s. Flux à plusieurs qualités (adaptatifs) : {adaptatifs} ; à une seule qualité : {len(ok) - adaptatifs}.",
+          "", "## Chaînes ajoutées par catégorie", "", "| Catégorie | Chaînes |", "|---|---|"]
+    md += [f"| {c} | {n} |" for c, n in par_cat.most_common()]
+    md += ["", "## Qualité la plus haute proposée", "", "| Qualité | Chaînes |", "|---|---|"]
+    md += [f"| {q} | {n} |" for q, n in qual.most_common()]
+    md += ["", "## Pays des chaînes ajoutées", "", "| Pays | Chaînes |", "|---|---|"]
+    md += [f"| {p} | {n} |" for p, n in pays.most_common()]
+    md += ["", "## Pourquoi des chaînes ne marchent pas", "", "| Cause | Chaînes |", "|---|---|"]
+    md += [f"| {c} | {n} |" for c, n in causes.most_common()]
+    md += ["", "## Liste des chaînes ajoutées", "", "| Nom | Catégorie | Pays | Qualité max | Démarrage |", "|---|---|---|---|---|"]
+    for l in sorted(ok, key=lambda l: (l["flux"][l["choisi"] - 1]["categorie"], l["nom"].lower())):
+        fl = l["flux"][l["choisi"] - 1]
+        md.append(f"| {l['nom']} | {fl['categorie']} | {fl['pays']} | {max(l['hmax'], l['hauteur'])}p | {l['ms'] / 1000:.1f} s |")
+    md += ["", "## Liste des chaînes écartées", "", "| Nom | Cause |", "|---|---|"]
+    for l in sorted(ko, key=lambda l: l["nom"].lower()):
+        md.append(f"| {l['nom']} | {' ; '.join(dict.fromkeys(l['raisons'])) or 'inconnue'} |")
+    md += ["", "Pour retirer toutes ces chaînes de test : `python3 importer-iptv-org.py --retirer` puis la synchro."]
+    texte = "\n".join(md) + "\n"
+    os.makedirs(DEST, exist_ok=True)
+    with open(os.path.join(DEST, "rapport.md"), "w", encoding="utf-8") as f:
+        f.write(texte)
+    import html as h
+    corps = []
+    for ligne in md:
+        if ligne.startswith("# "):
+            corps.append(f"<h1>{h.escape(ligne[2:])}</h1>")
+        elif ligne.startswith("## "):
+            corps.append(f"<h2>{h.escape(ligne[3:])}</h2>")
+        elif ligne.startswith("|---"):
+            continue
+        elif ligne.startswith("| "):
+            cel = [c.strip() for c in ligne.strip("|").split("|")]
+            corps.append("<tr>" + "".join(f"<td>{h.escape(c)}</td>" for c in cel) + "</tr>")
+        elif ligne.startswith("- "):
+            corps.append(f"<p>• {re.sub(r'[*][*](.*?)[*][*]', r'<b>\1</b>', h.escape(ligne[2:]))}</p>")
+        elif ligne:
+            corps.append(f"<p>{h.escape(ligne)}</p>")
+    page = "\n".join(corps)
+    page = re.sub(r"((?:<tr>.*</tr>\n?)+)", lambda m: "<table>" + m.group(1) + "</table>", page)
+    with open(os.path.join(DEST, "rapport.html"), "w", encoding="utf-8") as f:
+        f.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+                '<title>Rapport import iptv-org — MirTV</title><style>body{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#1b1840}'
+                'h1{font-size:24px}h2{font-size:18px;margin-top:28px;border-bottom:2px solid #ff9f1c}table{border-collapse:collapse;width:100%}'
+                'td{border-bottom:1px solid #ddd;padding:4px 8px;font-size:14px}tr:first-child td{font-weight:700;background:#f5f3ff}</style>' + page)
+    print(f"Lisibles : {len(ok)} / {len(lignes)} ; catégories : " + ", ".join(f"{c} {n}" for c, n in par_cat.most_common()))
+    print("Causes : " + " | ".join(f"{c} : {n}" for c, n in causes.most_common()))
+    print(f"Qualité : " + ", ".join(f"{q} {n}" for q, n in qual.most_common()) + f" ; adaptatifs {adaptatifs} ; démarrage médian {mediane} ms")
+    print("Pays : " + ", ".join(f"{p} {n}" for p, n in pays.most_common(12)))
+    print("Rapport : https://mirtv.rahiss.com/tv/import/rapport.html")
+    return 0
+
 if __name__ == "__main__":
     if "--candidats" in sys.argv:
         sys.exit(candidats())
@@ -230,4 +321,6 @@ if __name__ == "__main__":
         sys.exit(ajouter(" ".join(sys.argv[i + 1:])))
     if "--retirer" in sys.argv:
         sys.exit(retirer())
+    if "--resultats" in sys.argv:
+        sys.exit(resultats(sys.argv[sys.argv.index("--resultats") + 1]))
     print(__doc__)
