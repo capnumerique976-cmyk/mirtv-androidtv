@@ -11,9 +11,9 @@ window.MIRTV_CONFIG = {
   whatsapp: "",
   // Code parent utilisé tant que le parent n'en a pas choisi un (valeur de test).
   codeParentParDefaut: "1234",
-  // Secondes avant d'afficher « Cette chaîne ne marche pas en ce moment. »
-  delaiChaineSecondes: 10,
+  // Secondes avant « Cette chaîne ne marche pas en ce moment. » (certaines petites chaînes mettent ~20 s)
+  delaiChaineSecondes: 25,
   // Tentatives silencieuses de reconnexion pendant la lecture d'une chaîne.
   reconnexions: 3,
-  version: "web-0.1.7"
+  version: "web-0.1.8"
 };
