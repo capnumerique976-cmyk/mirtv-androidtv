@@ -23,6 +23,7 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.mirtv.MirtvProfils
 import org.jellyfin.androidtv.mirtv.ui.MirtvCouleurs
+import org.jellyfin.androidtv.mirtv.ui.demanderFocusAvecReessais
 import org.jellyfin.androidtv.mirtv.ui.MirtvKeyHints
 import org.jellyfin.androidtv.mirtv.ui.MirtvPicto
 import org.jellyfin.androidtv.mirtv.ui.MirtvPolice
@@ -51,7 +52,7 @@ class AccueilFragment : MirtvFragment() {
 		val libelleParent = stringResource(R.string.profil_parent)
 		val demandeTele = remember { FocusRequester() }
 		BackHandler { } // Retour sur l'accueil ne quitte pas l'appli
-		LaunchedEffect(Unit) { demandeTele.requestFocus() }
+		LaunchedEffect(Unit) { demandeTele.demanderFocusAvecReessais() }
 
 		fun ouvrir(d: org.jellyfin.androidtv.ui.navigation.Destination.Fragment) = navigationRepository.navigate(d)
 

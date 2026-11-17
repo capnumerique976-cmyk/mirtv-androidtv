@@ -54,6 +54,7 @@ import org.jellyfin.androidtv.mirtv.ui.MirtvAnimal
 import org.jellyfin.androidtv.mirtv.ui.MirtvAnimalImage
 import org.jellyfin.androidtv.mirtv.ui.MirtvCarte
 import org.jellyfin.androidtv.mirtv.ui.MirtvCouleurs
+import org.jellyfin.androidtv.mirtv.ui.demanderFocusAvecReessais
 import org.jellyfin.androidtv.mirtv.ui.MirtvKeyHints
 import org.jellyfin.androidtv.mirtv.ui.MirtvPolice
 import org.jellyfin.androidtv.mirtv.ui.MirtvTailles
@@ -141,7 +142,7 @@ class QuiRegardeFragment : Fragment() {
 		BackHandler { } // pas de sortie de l'appli depuis « Qui regarde ? »
 		LaunchedEffect(liste.map { it.id }) {
 			val i = liste.indexOfFirst { it.id.toString() == dernier }.let { if (it >= 0) it else 0 }
-			runCatching { demandes[i].requestFocus() }
+			demandes[i].demanderFocusAvecReessais()
 		}
 		Box(Modifier.fillMaxSize().background(MirtvCouleurs.Nuit)) {
 			Column(

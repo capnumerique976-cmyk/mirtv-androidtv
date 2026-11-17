@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.mirtv.ui.MirtvCouleurs
+import org.jellyfin.androidtv.mirtv.ui.demanderFocusAvecReessais
 import org.jellyfin.androidtv.mirtv.ui.MirtvKeyHints
 import org.jellyfin.androidtv.mirtv.ui.MirtvPicto
 import org.jellyfin.androidtv.mirtv.ui.MirtvPolice
@@ -47,7 +48,7 @@ class BientotFragment : MirtvFragment() {
 		val nom = userRepository.currentUser.value?.name
 		// Retour de la télécommande : un cran en arrière (comportement par défaut), sauf à l'accueil des enfants
 		if (enfants) BackHandler { }
-		LaunchedEffect(Unit) { demande.requestFocus() }
+		LaunchedEffect(Unit) { demande.demanderFocusAvecReessais() }
 		Box(Modifier.fillMaxSize().background(fond)) {
 			Column(
 				Modifier.fillMaxSize().padding(horizontal = MirtvTailles.MargeHorizontale, vertical = MirtvTailles.MargeVerticale),

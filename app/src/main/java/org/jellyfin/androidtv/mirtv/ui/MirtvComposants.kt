@@ -241,3 +241,15 @@ fun MirtvBanner(texte: String, modifier: Modifier = Modifier, couleur: Color = M
 }
 
 private fun formatHeure(): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+
+/**
+ * Donne le focus (sélection) à un élément, en réessayant : juste après l'affichage de l'écran,
+ * l'élément n'est pas encore prêt et la demande échoue. Sans ça, rien n'est sélectionné au lancement.
+ */
+suspend fun FocusRequester.demanderFocusAvecReessais(essais: Int = 20) {
+	repeat(essais) {
+		val ok = runCatching { requestFocus(); true }.getOrDefault(false)
+		if (ok) return
+		delay(100)
+	}
+}

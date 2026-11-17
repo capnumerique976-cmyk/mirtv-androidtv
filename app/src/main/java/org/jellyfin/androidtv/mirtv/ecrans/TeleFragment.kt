@@ -31,6 +31,7 @@ import org.jellyfin.androidtv.mirtv.MirtvZapping
 import org.jellyfin.androidtv.mirtv.ui.MirtvBanner
 import org.jellyfin.androidtv.mirtv.ui.MirtvCarte
 import org.jellyfin.androidtv.mirtv.ui.MirtvCouleurs
+import org.jellyfin.androidtv.mirtv.ui.demanderFocusAvecReessais
 import org.jellyfin.androidtv.mirtv.ui.MirtvKeyHints
 import org.jellyfin.androidtv.mirtv.ui.MirtvPicto
 import org.jellyfin.androidtv.mirtv.ui.MirtvPolice
@@ -82,7 +83,7 @@ class TeleFragment : MirtvFragment() {
 
 		val liste = chaines.orEmpty().filter { c -> c.tags.orEmpty().contains(onglets[ongletIndex].etiquette) }
 		LaunchedEffect(liste.size, ongletIndex) { MirtvZapping.liste = liste }
-		LaunchedEffect(chaines) { if (chaines != null) runCatching { demande.requestFocus() } }
+		LaunchedEffect(chaines) { if (chaines != null) demande.demanderFocusAvecReessais() }
 
 		Box(Modifier.fillMaxSize().background(MirtvCouleurs.Nuit)) {
 			Column(
