@@ -61,6 +61,8 @@ const serveur = http.createServer((req, res) => {
   req.on("data", d => { corps += d; });
   req.on("end", () => {
     appels.push({ methode: req.method, chemin: p, requete: url.search, corps });
+    // Comme le vrai serveur : un en-tête avec des caractères non ASCII est refusé (400)
+    if (/[^\x20-\x7E]/.test(req.headers.authorization || "")) { res.writeHead(400); return res.end(); }
     // Appli web
     if (p === "/tv" ) { res.writeHead(302, { Location: "/tv/" }); return res.end(); }
     if (p.startsWith("/tv/")) {

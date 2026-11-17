@@ -45,14 +45,16 @@
     return id;
   }
   function numeroEcran() { return appareilId().replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase(); }
+  // Nom de l'appareil envoyé au serveur : lettres sans accent seulement (un « é » fait refuser la demande).
   function nomAppareil() {
     const ua = navigator.userAgent;
-    if (/Android/i.test(ua) && /TV|AFT|BRAVIA|SMART/i.test(ua)) return "Télé Android";
-    if (/Tizen|Web0S|webOS|SmartTV/i.test(ua)) return "Télé connectée";
-    if (/Android/i.test(ua)) return "Téléphone Android";
+    if (/Android/i.test(ua) && /TV|AFT|BRAVIA|SMART/i.test(ua)) return "Tele Android";
+    if (/Tizen|Web0S|webOS|SmartTV/i.test(ua)) return "Tele connectee";
+    if (/Android/i.test(ua)) return "Telephone Android";
     if (/iPhone|iPad/i.test(ua)) return "iPhone";
     return "Navigateur";
   }
+  const ascii = v => String(v).normalize("NFD").replace(/[^\x20-\x7E]/g, "").replace(/"/g, "");
 
   /* ===================== Profils ===================== */
 
@@ -125,7 +127,7 @@
   }
 
   function enteteAuth(jeton) {
-    let h = `MediaBrowser Client="MirTV Web", Device="${nomAppareil()}", DeviceId="${appareilId()}", Version="${CONFIG.version}"`;
+    let h = `MediaBrowser Client="MirTV Web", Device="${ascii(nomAppareil())}", DeviceId="${ascii(appareilId())}", Version="${ascii(CONFIG.version)}"`;
     if (jeton) h += `, Token="${jeton}"`;
     return h;
   }
@@ -494,7 +496,8 @@
             connecte(res);
           } catch (err) {
             if (err instanceof ErreurApi && err.tropDEcrans) return montrer(ecranTropDEcrans());
-            zone.textContent = err instanceof ErreurApi && err.statut === 0 ? t("pas_internet_titre") : t("erreur_connexion");
+            const s = err instanceof ErreurApi ? err.statut : -1;
+            zone.textContent = s === 0 ? t("pas_internet_titre") : (s === 401 || s === 403) ? t("erreur_connexion") : t("aide_image_consigne");
             zone.hidden = false;
           }
         });

@@ -266,8 +266,9 @@ test('appli installable : manifeste, icônes et service worker', async ({ page, 
   expect(sw).toBeTruthy();
 });
 
-test('téléphone : l’accueil tient dans un petit écran', async ({ browser }) => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+test('téléphone : connexion et accueil sur un vrai téléphone Android', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true,
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-A155F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36' });
   const page = await ctx.newPage();
   await neuf(page);
   await connexion(page, 'f1-parent');
