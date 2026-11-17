@@ -32,14 +32,16 @@ p{margin:.6rem 0}.petit{opacity:.75;font-size:.95rem}
 HTML;
     }
 
-    public static function retour(string $statut, bool $annule, string $facture, string $ici): string
+    public static function retour(string $statut, bool $annule, string $facture, string $ici, ?string $appli = null): string
     {
         $f = e($facture);
         if ($statut === 'SUCCESS') {
+            $suite = $appli ? '<a class="bouton vert" href="' . e($appli) . '">Regarder MirTV</a>' : '<a class="bouton vert" href="' . $f . '">Voir ma facture</a>';
+
             return self::cadre('Paiement reçu', <<<HTML
 <div class="rond ok">✓</div><h1>Merci, c'est payé !</h1>
 <p>Votre abonnement est prolongé. La télé se remet en marche toute seule dans une minute.</p>
-<a class="bouton vert" href="{$f}">Voir ma facture</a>
+{$suite}
 HTML);
         }
         if ($annule || in_array($statut, ['FAILED', 'EXPIRED', 'MONTANT'])) {

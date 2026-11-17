@@ -395,9 +395,20 @@ class OrangeMoney extends Gateway
         if ($request->wantsJson()) {
             return response()->json(['statut' => $statut]);
         }
+        // Retour vers la page de paiement de la famille (lien du QR, sans connexion) ; sinon la facture
         $facture = route('invoices.show', $ligne->invoice_id);
+        $appli = null;
+        try {
+            $service = DB::table('invoice_items')->where('invoice_id', $ligne->invoice_id)->where('reference_type', \App\Models\Service::class)->value('reference_id');
+            $jeton = $service ? DB::table('ext_mirtv_familles')->where('service_id', $service)->value('jeton_paiement') : null;
+            if ($jeton) {
+                $facture = '/payer/' . $jeton;
+                $appli = 'https://mirtv.rahiss.com/tv/';
+            }
+        } catch (Exception $e) { /* comptes MirTV pas installés : on garde la facture */
+        }
 
-        return response(Pages::retour($statut, $request->boolean('annule'), $facture, $request->url()))
+        return response(Pages::retour($statut, $request->boolean('annule'), $facture, $request->url(), $appli))
             ->header('Cache-Control', 'no-store');
     }
 
@@ -411,7 +422,11 @@ class OrangeMoney extends Gateway
             $choix = $request->input('choix') === 'payer' ? 'SUCCESS' : 'FAILED';
             DB::table(self::TABLE)->where('id', $ligne->id)->update(['sim_status' => $choix, 'updated_at' => now()]);
             // Comme Orange : un avis arrive au serveur, qui vérifie ensuite le statut
-            (new self)->verifier($commande);
+            try {
+                (new self)->verifier($commande);
+            } catch (Exception $e) {
+                Log::warning('Orange Money (simulation) : suite du paiement en erreur pour ' . $commande . ' : ' . $e->getMessage());
+            }
 
             return redirect('/extensions/gateways/orangemoney/retour/' . $commande . ($choix === 'FAILED' ? '?annule=1' : ''));
         }
