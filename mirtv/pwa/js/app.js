@@ -1288,7 +1288,7 @@
         const e = el(`<section class="ecran lecteur nav" tabindex="0" data-cle="video" aria-label="${echap(chaine.Name)}">
           <video playsinline autoplay></video><div class="chargement-video"></div>
           <div class="nom-chaine" hidden></div><div class="bandeau" hidden></div>
-          <button class="bouton bouton-accueil-video" data-accueil tabindex="-1">${P.maison}${echap(t("bouton_accueil"))}</button></section>`);
+          <button class="bouton bouton-accueil-video bouton-icone" data-accueil tabindex="-1" aria-label="${echap(t("bouton_accueil"))}" title="${echap(t("bouton_accueil"))}">${P.maison}</button></section>`);
         video = e.querySelector("video");
         video.addEventListener("playing", () => {
           enLecture = true; tentatives = 0; clearTimeout(minuterieDelai);
@@ -1341,10 +1341,12 @@
   // Bouton « Plein écran » en haut à droite du lecteur (souris, doigt) ; libellé tenu à jour
   function boutonPleinEcran(e, video) {
     if (!pleinEcranDispo(video)) return;
-    const b = el(`<button class="bouton bouton-plein-ecran-video" data-plein tabindex="-1"></button>`);
+    const b = el(`<button class="bouton bouton-plein-ecran-video bouton-icone" data-plein tabindex="-1"></button>`);
     const maj = () => {
       if (!b.isConnected && b.dataset.pose) { document.removeEventListener("fullscreenchange", maj); document.removeEventListener("webkitfullscreenchange", maj); return; }
-      const on = enPleinEcran(); b.innerHTML = (on ? P.reduire : P.plein) + `<span class="libelle">${echap(t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"))}</span>`; b.setAttribute("aria-label", t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"));
+      const on = enPleinEcran(); b.innerHTML = on ? P.reduire : P.plein; // icône seule (libellé pour les lecteurs d'écran et au survol)
+      b.setAttribute("aria-label", t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"));
+      b.title = t(on ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran");
     };
     maj();
     b.dataset.pose = "1";
@@ -1533,7 +1535,7 @@
       },
       ouvrir() {
         const e = el(`<section class="ecran lecteur nav" tabindex="0" data-cle="video" aria-label="${echap(item.Name)}"><video playsinline autoplay controls></video><div class="chargement-video">${echap(t("chargement"))}</div>
-          <button class="bouton bouton-accueil-video" data-accueil tabindex="-1">${P.maison}${echap(t("bouton_accueil"))}</button></section>`);
+          <button class="bouton bouton-accueil-video bouton-icone" data-accueil tabindex="-1" aria-label="${echap(t("bouton_accueil"))}" title="${echap(t("bouton_accueil"))}">${P.maison}</button></section>`);
         video = e.querySelector("video");
         sessionLecture = "web" + Date.now().toString(36);
         // Lecture directe du fichier (vidéos préparées en H.264 à l'avance), jamais de conversion

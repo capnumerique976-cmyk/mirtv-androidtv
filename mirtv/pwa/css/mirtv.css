@@ -200,7 +200,10 @@ input { font: inherit; }
 .bouton-plein-ecran-video svg { width: 1.3rem; height: 1.3rem; }
 /* Souris : les boutons du lecteur s'effacent quand on ne bouge pas, reviennent au survol */
 @media (hover: hover) { .lecteur .bouton-accueil-video, .lecteur .bouton-plein-ecran-video { transition: opacity 0.3s; } .lecteur:not(:hover) .bouton-plein-ecran-video { opacity: 0.35; } }
-@media (max-width: 760px) { .bouton-plein-ecran-video .libelle { display: none; } .bouton-plein-ecran-video { padding: 0.4rem 0.7rem; } }
+/* Lecteur : boutons Accueil et Plein écran en icône seule (ronds, discrets) */
+.lecteur .bouton-icone { padding: 0; width: 2.9rem; min-height: 2.9rem; height: 2.9rem; border-radius: 50%; justify-content: center; gap: 0; }
+.lecteur .bouton-icone svg { width: 1.45rem; height: 1.45rem; margin: 0; }
+@media (max-width: 760px) { .lecteur .bouton-icone { width: 2.5rem; min-height: 2.5rem; height: 2.5rem; } }
 @media (hover: none) and (pointer: coarse) { .lecteur:not(:hover) .bouton-accueil-video { opacity: 0.9; } }
 @media (max-width: 760px) { .barre h1 { font-size: 1.4rem; } .bouton-accueil { padding: 0.4rem 0.7rem; } .heure { display: none; } }
 
