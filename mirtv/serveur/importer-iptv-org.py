@@ -128,6 +128,7 @@ def candidats():
     registre = lire_registre()
     urls = {c["url_source"] for c in registre}
     noms = {norm(c["nom"]) for c in registre}
+    cles = {cle_langue(c["nom"]) for c in registre}
 
     b.update({"flux_des_chaines": 0, "ecartes_http": 0, "ecartes_referrer_user_agent": 0, "ecartes_deja_dans_mirtv": 0})
     par_chaine = {}
@@ -147,7 +148,7 @@ def candidats():
         feed = s.get("feed")
         nf = nom_feed.get((ch, feed), "") if feed and feed != principal.get(ch) else ""
         nom = c["name"] + (f" ({nf})" if nf and nf.lower() not in ("sd", "hd", "main") else "")
-        if url in urls or norm(nom) in noms or norm(c["name"]) in noms:
+        if url in urls or norm(nom) in noms or norm(c["name"]) in noms or cle_langue(nom) in cles:
             b["ecartes_deja_dans_mirtv"] += 1
             continue
         cat, enfants = categorie(c.get("categories"))
@@ -313,6 +314,34 @@ def resultats(fichier):
     print("Rapport : https://mirtv.rahiss.com/tv/import/rapport.html")
     return 0
 
+
+LANGUES = {"english": "en", "anglais": "en", "french": "fr", "francais": "fr", "arabic": "ar", "arabe": "ar",
+           "spanish": "es", "espagnol": "es", "german": "de", "allemand": "de", "hungarian": "hu", "hongrois": "hu",
+           "italian": "it", "italien": "it", "portuguese": "pt", "portugais": "pt", "russian": "ru", "russe": "ru"}
+
+
+def cle_langue(nom):
+    """« France 24 (English) » et « France 24 (anglais) » → même clé ; sans langue = français."""
+    s = unicodedata.normalize("NFKD", nom or "").encode("ascii", "ignore").decode().lower()
+    mots = re.findall(r"[a-z0-9+]+", s)
+    langue = next((LANGUES[m] for m in mots if m in LANGUES), "fr")
+    return " ".join(m for m in mots if m not in LANGUES and m not in ("hd", "sd", "tv")) + "|" + langue
+
+
+def doublons(retirer=False):
+    registre = lire_registre()
+    autres = {cle_langue(c["nom"]): c["nom"] for c in registre if not c["notes"].startswith(MARQUE)}
+    trouves = [c for c in registre if c["notes"].startswith(MARQUE) and cle_langue(c["nom"]) in autres]
+    for c in trouves:
+        print(f"  doublon : {c['nom']}  =  {autres[cle_langue(c['nom'])]}")
+    if retirer and trouves:
+        ids = {id(c) for c in trouves}
+        ecrire_registre([c for c in registre if id(c) not in ids], "doublons-iptv-org")
+        print(f"{len(trouves)} doublon(s) retiré(s). Lancez la synchro.")
+    elif not trouves:
+        print("Aucun doublon.")
+    return 0
+
 if __name__ == "__main__":
     if "--candidats" in sys.argv:
         sys.exit(candidats())
@@ -321,6 +350,8 @@ if __name__ == "__main__":
         sys.exit(ajouter(" ".join(sys.argv[i + 1:])))
     if "--retirer" in sys.argv:
         sys.exit(retirer())
+    if "--doublons" in sys.argv:
+        sys.exit(doublons("--retirer-doublons" in sys.argv))
     if "--resultats" in sys.argv:
         sys.exit(resultats(sys.argv[sys.argv.index("--resultats") + 1]))
     print(__doc__)
