@@ -113,7 +113,7 @@ def main():
                 continue
             ext = os.path.splitext(url.split("?")[0])[1].lower()
             ext = ext if ext in (".png", ".svg", ".webp", ".jpg", ".jpeg") else ".png"
-            fichier = slug(nom) + ext
+            fichier = f"{slug(nom)}-{hashlib.sha1(data).hexdigest()[:8]}{ext}"  # nom qui change avec le logo : jamais d'ancien logo en cache
             with open(os.path.join(DEST, fichier), "wb") as f:
                 f.write(data)
             break
@@ -123,7 +123,7 @@ def main():
                 url = tvlogos.get(cand) or tvlogos.get(cand.replace(" ", ""))
                 data = charger(url) if url else None
                 if data:
-                    fichier = slug(nom) + ".png"
+                    fichier = f"{slug(nom)}-{hashlib.sha1(data).hexdigest()[:8]}.png"
                     with open(os.path.join(DEST, fichier), "wb") as f:
                         f.write(data)
                     ident = url.rsplit("/", 1)[-1]
@@ -133,6 +133,9 @@ def main():
             continue
         resultat[nom] = fichier
         print(f"  OK   {nom} ← {ident}")
+    for f in os.listdir(DEST):  # ménage : anciens logos qui ne servent plus
+        if f != "logos.json" and f not in resultat.values():
+            os.remove(os.path.join(DEST, f))
     with open(os.path.join(DEST, "logos.json"), "w", encoding="utf-8") as f:
         json.dump(resultat, f, ensure_ascii=False, indent=0)
     for nom in sans:
