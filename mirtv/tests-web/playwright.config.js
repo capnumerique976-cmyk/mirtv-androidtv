@@ -11,6 +11,7 @@ module.exports = {
   use: { screenshot: 'only-on-failure', viewport: { width: 1920, height: 1080 }, locale: 'fr-FR', ...chrome },
   webServer: { command: 'node faux-jellyfin.js 8099', url: 'http://127.0.0.1:8099/tv/', reuseExistingServer: true, timeout: 20000 },
   projects: [
+    { name: 'outils', testMatch: /(explorer|captures)\.spec\.js/, use: { baseURL: 'http://127.0.0.1:8099' } },
     { name: 'parcours', testMatch: /parcours\.spec\.js/, use: { baseURL: 'http://127.0.0.1:8099' } },
     { name: 'site', testMatch: /site\.spec\.js/, use: { baseURL: process.env.MIRTV_URL || 'https://mirtv.rahiss.com' } },
   ],
