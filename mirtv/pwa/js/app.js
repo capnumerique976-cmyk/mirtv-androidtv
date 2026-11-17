@@ -490,7 +490,7 @@
           const zone = e.querySelector("[data-erreur]");
           zone.hidden = true;
           try {
-            const res = await api("/Users/AuthenticateByName", { method: "POST", jeton: null, corps: { Username: f.username.value.trim(), Pw: f.password.value.replace(/^\s+|\s+$/g, "") } });
+            const res = await api("/Users/AuthenticateByName", { method: "POST", jeton: null, corps: { Username: nettoyer(f.username.value, true), Pw: nettoyer(f.password.value, false) } });
             connecte(res);
           } catch (err) {
             if (err instanceof ErreurApi && err.tropDEcrans) return montrer(ecranTropDEcrans());
@@ -502,6 +502,18 @@
         focaliser('[data-cle="nom"]');
       }
     };
+  }
+
+  // Nettoie un nom ou un mot de passe collé depuis un document ou une messagerie :
+  // caractères invisibles, espaces insécables, tirets spéciaux, « \par » d'un fichier RTF, étiquette « Utilisateur : ».
+  function nettoyer(v, estNom) {
+    let s = String(v || "").normalize("NFKC");
+    s = s.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "");
+    s = s.replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-");
+    s = s.replace(/\\par\b/g, "");
+    if (estNom) s = s.replace(/^\s*(utilisateur|nom du compte|nom)\s*:\s*/i, "").toLowerCase();
+    else s = s.replace(/^\s*mot de passe\s*:\s*/i, "");
+    return s.replace(/^\s+|\s+$/g, "");
   }
 
   function connecte(res) {

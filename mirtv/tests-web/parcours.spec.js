@@ -154,7 +154,7 @@ test('connexion : espaces copiés par erreur autour du mot de passe acceptés, c
   await neuf(page);
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await page.getByRole('button', { name: 'Utiliser le nom et le mot de passe' }).click();
-  await page.getByLabel('Nom du compte').fill(' f1-parent ');
+  await page.getByLabel('Nom du compte').fill('Utilisateur : F1\u2011parent\u200b ');
   await page.getByLabel('Mot de passe', { exact: true }).fill('  test \n');
   await page.getByLabel('Afficher le mot de passe').check();
   await expect(page.getByLabel('Mot de passe', { exact: true })).toHaveAttribute('type', 'text');
