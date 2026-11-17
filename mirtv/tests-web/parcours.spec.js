@@ -517,3 +517,27 @@ test('lecteur : bouton « Plein écran » visible, entre et sort du plein écran
   await page.locator('.bouton-accueil-video').click();
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
 });
+
+test('lecteur : le bandeau se ferme (bouton ✕, toucher l’image, tout seul après 8 s)', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="c-c1"]').click();
+  const bandeau = page.locator('.bandeau');
+  await page.keyboard.press('Enter');
+  await expect(bandeau).toBeVisible();
+  await expect(page.locator('[data-cle="fermer-bandeau"]')).toHaveAttribute('aria-label', 'Fermer');
+  await page.screenshot({ path: 'test-results/lecteur-bandeau.png' });
+  await page.locator('[data-cle="fermer-bandeau"]').click();
+  await expect(bandeau).toBeHidden();
+  // Toucher l'image : ouvre, toucher encore : ferme
+  await page.mouse.click(700, 400);
+  await expect(bandeau).toBeVisible();
+  await page.mouse.click(700, 300);
+  await expect(bandeau).toBeHidden();
+  // Tout seul après 8 s sans rien faire
+  await page.keyboard.press('Enter');
+  await expect(bandeau).toBeVisible();
+  await page.waitForTimeout(8600);
+  await expect(bandeau).toBeHidden();
+});

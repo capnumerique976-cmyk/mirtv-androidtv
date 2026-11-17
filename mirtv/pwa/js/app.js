@@ -116,6 +116,7 @@
     cadenas: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"><rect x="10" y="22" width="28" height="20" rx="4"/><path d="M16 22v-6a8 8 0 0116 0v6"/></svg>',
     dessins: '<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="26" r="16"/><circle cx="12" cy="10" r="7"/><circle cx="36" cy="10" r="7"/></svg>',
     soustitres: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><rect x="5" y="10" width="38" height="28" rx="4"/><path d="M12 30h10M26 30h10M12 22h24"/></svg>',
+    croix: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"><path d="M13 13l22 22M35 13L13 35"/></svg>',
     plein: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V6h11M31 6h11v11M42 31v11H31M17 42H6V31"/></svg>',
     reduire: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6v11H6M42 17H31V6M31 42V31h11M6 31h11v11"/></svg>',
     programme: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M10 12h28M10 24h28M10 36h18"/></svg>',
@@ -1089,7 +1090,7 @@
   }
 
   function ecranLecteurChaine(chaine, liste, enfants) {
-    let video, hls = null, minuterieNom = null, minuterieDelai = null, tentatives = 0, debutChangement = 0, bandeauOuvert = false, ferme = false, enLecture = false;
+    let video, hls = null, minuterieNom = null, minuterieDelai = null, minuterieBandeau = null, tentatives = 0, debutChangement = 0, bandeauOuvert = false, ferme = false, enLecture = false;
     let courante = chaine;
     const zapListe = enfants ? chainesEnfants(liste) : liste;
 
@@ -1208,7 +1209,16 @@
       bandeauOuvert = true;
       const zone = $app.querySelector(".bandeau");
       zone.hidden = false;
-      zone.innerHTML = `<div><div class="titre-chaine">${echap(courante.Name)}</div><div data-progs class="ligne-prog">${echap(t("chargement"))}</div></div><div class="actions"></div>`;
+      zone.innerHTML = `<div><div class="titre-chaine">${echap(courante.Name)}</div><div data-progs class="ligne-prog">${echap(t("chargement"))}</div></div><div class="actions"></div>
+        <button class="bouton fermer-bandeau nav" data-cle="fermer-bandeau" aria-label="${echap(t("bouton_fermer"))}" title="${echap(t("bouton_fermer"))}">${P.croix}</button>`;
+      zone.querySelector('[data-cle="fermer-bandeau"]').addEventListener("click", ev => { ev.stopPropagation(); fermerBandeau(); });
+      // Le bandeau se range tout seul après 8 s sans toucher à rien (comme sur une box)
+      const relancer = () => { clearTimeout(minuterieBandeau); minuterieBandeau = setTimeout(() => { if (bandeauOuvert && !ferme) fermerBandeau(); }, 8000); };
+      if (!zone.dataset.ecoute) {
+        zone.dataset.ecoute = "1";
+        ["pointermove", "pointerdown", "keydown", "focusin"].forEach(ev => zone.addEventListener(ev, () => { if (bandeauOuvert) relancer(); }));
+      }
+      relancer();
       const actions = zone.querySelector(".actions");
       let favori = !!(courante.UserData && courante.UserData.IsFavorite);
       const bFav = el(`<button class="bouton principal nav" data-cle="fav">${P.favoris}${echap(t(favori ? "bouton_retirer_favoris" : "bouton_ajouter_favoris"))}</button>`);
@@ -1231,11 +1241,12 @@
       bProg.addEventListener("click", () => { ferme = true; arreterLecture(); montrer(ecranProgramme(liste), true); });
       actions.appendChild(bProg);
       if (pleinEcranDispo(video)) {
-        const bPlein = el(`<button class="bouton nav" data-cle="plein">${enPleinEcran() ? P.reduire : P.plein}${echap(t(enPleinEcran() ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran"))}</button>`);
+        const lib = t(enPleinEcran() ? "bouton_quitter_plein_ecran" : "bouton_plein_ecran");
+        const bPlein = el(`<button class="bouton nav bouton-rond" data-cle="plein" aria-label="${echap(lib)}" title="${echap(lib)}">${enPleinEcran() ? P.reduire : P.plein}</button>`);
         bPlein.addEventListener("click", () => { fermerBandeau(); basculerPleinEcran(video); });
         actions.appendChild(bPlein);
       }
-      actions.appendChild(el(`<button class="bouton nav" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}">${P.maison}<span class="libelle">${echap(t("bouton_accueil"))}</span></button>`));
+      actions.appendChild(el(`<button class="bouton nav bouton-rond" data-accueil data-cle="accueil-btn" aria-label="${echap(t("bouton_accueil"))}" title="${echap(t("bouton_accueil"))}">${P.maison}</button>`));
       focaliser(bFav);
       const progs = (await programmesChaine(courante.Id, 3)).filter(p => progReel(p, courante));
       const zp = zone.querySelector("[data-progs]");
@@ -1251,6 +1262,7 @@
     }
     function fermerBandeau() {
       bandeauOuvert = false;
+      clearTimeout(minuterieBandeau);
       const zone = $app.querySelector(".bandeau");
       if (zone) { zone.hidden = true; zone.innerHTML = ""; }
       const v = $app.querySelector(".lecteur");
@@ -1272,7 +1284,7 @@
 
     return {
       nom: "lecteur-chaine",
-      fermer() { ferme = true; arreterLecture(); clearTimeout(minuterieNom); quitterPleinEcran(); },
+      fermer() { ferme = true; arreterLecture(); clearTimeout(minuterieNom); clearTimeout(minuterieBandeau); quitterPleinEcran(); },
       retour() { if (bandeauOuvert) { fermerBandeau(); return true; } return false; },
       touche(e) {
         if (bandeauOuvert) return false;
@@ -1308,7 +1320,8 @@
           if (y0 === null || ev.target.closest(".bandeau, [data-accueil], [data-plein]")) { y0 = null; return; }
           const dy = ev.clientY - y0; y0 = null;
           if (Math.abs(dy) > 60) zapper(dy < 0 ? 1 : -1);
-          else if (!bandeauOuvert) { if (video.paused) video.play().catch(() => {}); ouvrirBandeau(); }
+          else if (bandeauOuvert) fermerBandeau(); // toucher l'image range le bandeau
+          else { if (video.paused) video.play().catch(() => {}); ouvrirBandeau(); }
         });
         boutonPleinEcran(e, video);
         $app.appendChild(e);
