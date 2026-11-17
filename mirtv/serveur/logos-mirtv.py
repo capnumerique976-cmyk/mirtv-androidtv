@@ -5,9 +5,9 @@ Cherche le logo officiel de chaque chaîne MirTV dans la base libre iptv-org (ch
 en garde une copie sur le serveur (DEST) et écrit DEST/logos.json : {"nom de la chaîne": "fichier"}.
 L'appli web lit https://mirtv.rahiss.com/tv/logos/logos.json.
 Associations manuelles : logos-associations.csv (nom MirTV;identifiant iptv-org), à côté de ce script.
-Usage : sudo python3 logos-mirtv.py   (relançable ; ne retélécharge pas un logo déjà présent)
+Usage : sudo python3 logos-mirtv.py   (relançable)
 """
-import csv, importlib.util, json, os, re, sys, urllib.request
+import csv, hashlib, importlib.util, json, os, re, sys, urllib.request
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 DEST = os.environ.get("MIRTV_LOGOS", "/opt/mirtv/images-web/logos")
@@ -52,7 +52,24 @@ def main():
         score = (l.get("format") in ("PNG", "SVG", "WebP"), "picons" not in (l.get("tags") or []), l.get("width") or 0)
         meilleurs.setdefault(l["channel"], []).append((score, l["url"]))
 
-    resultat, sans = {}, []
+    cache = {}
+
+    def charger(url):
+        """Contenu du logo, ou None. Les images « supprimée » des hébergeurs (renvoi vers removed.png…) sont refusées."""
+        if url not in cache:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "MirTV-logos/1.0"})
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = r.read(3_000_000)
+                    fin = r.geturl()
+                cache[url] = None if len(data) < 200 or "removed" in fin.lower() else data
+            except Exception as e:
+                print(f"  logo non téléchargé ({url[:60]}) : {e}", file=sys.stderr)
+                cache[url] = None
+        return cache[url]
+
+    # Logos possibles de chaque chaîne (le meilleur d'abord)
+    choix = []
     for _, nom in chaines:
         ident = manuel.get(nom)
         sans_langue = guide.norm(re.sub(r"\(.*?\)", " ", nom))  # « France 24 (anglais) » → même logo que France 24
@@ -61,25 +78,29 @@ def main():
             if ident:
                 break
         urls = [u for _, u in sorted(meilleurs.get(ident, []), reverse=True) if u.startswith("https://")] if ident else []
+        choix.append((nom, ident, sans_langue, urls))
+
+    # Image « logo absent » d'un hébergeur : le même fichier revient pour des chaînes sans rapport → refusé
+    vus = {}
+    for nom, ident, base, urls in choix:
+        for url in urls[:2]:
+            data = charger(url)
+            if data:
+                vus.setdefault(hashlib.sha1(data).hexdigest(), set()).add(base)
+    faux = {h for h, bases in vus.items() if len(bases) >= 3}
+
+    resultat, sans = {}, []
+    for nom, ident, base, urls in choix:
         fichier = None
-        for url in urls:  # le meilleur logo d'abord, le suivant s'il ne se télécharge pas
+        for url in urls:
+            data = charger(url)
+            if not data or hashlib.sha1(data).hexdigest() in faux:
+                continue
             ext = os.path.splitext(url.split("?")[0])[1].lower()
             ext = ext if ext in (".png", ".svg", ".webp", ".jpg", ".jpeg") else ".png"
-            essai = slug(nom) + ext
-            chemin = os.path.join(DEST, essai)
-            if not os.path.exists(chemin):
-                try:
-                    req = urllib.request.Request(url, headers={"User-Agent": "MirTV-logos/1.0"})
-                    with urllib.request.urlopen(req, timeout=30) as r:
-                        data = r.read(3_000_000)
-                    if len(data) < 200:
-                        raise ValueError("fichier vide")
-                    with open(chemin, "wb") as f:
-                        f.write(data)
-                except Exception as e:
-                    print(f"  logo non téléchargé pour {nom} : {e}", file=sys.stderr)
-                    continue
-            fichier = essai
+            fichier = slug(nom) + ext
+            with open(os.path.join(DEST, fichier), "wb") as f:
+                f.write(data)
             break
         if not fichier:
             sans.append(nom)
