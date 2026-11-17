@@ -24,6 +24,9 @@ echo "=== Fenêtre au premier plan ==="
 adb shell dumpsys window | grep -m2 -E "mCurrentFocus|mFocusedApp"
 echo "=== Erreurs du journal (extrait) ==="
 grep -E "E AndroidRuntime|E/AndroidRuntime| E .*(mirtv|MirTV|jellyfin)|ANR|Process .* has died" "$SORTIE/logcat.txt" | head -20
+if ! grep -q 'text="Se connecter"' "$SORTIE/ecran.xml"; then
+  echo "ECHEC : l'écran « Qui regarde ? » n'offre pas « Se connecter »"; RESULTAT=1
+fi
 if ! adb shell pidof "$APP" | grep -q '[0-9]'; then
   echo "ECHEC : l'appli ne tourne plus (plantage)"; RESULTAT=1
 fi
@@ -36,6 +39,10 @@ fi
 # Navigation simple : droite, OK, puis nouvelle capture
 adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 6
 adb exec-out screencap -p > "$SORTIE/03-apres-ok.png"
+adb shell uiautomator dump /sdcard/ecran2.xml >/dev/null 2>&1
+adb pull /sdcard/ecran2.xml "$SORTIE/ecran2.xml" >/dev/null 2>&1
+echo "=== Textes après OK sur « Se connecter » ==="
+grep -o 'text="[^"]\+"' "$SORTIE/ecran2.xml" | head -20
 adb logcat -d > "$SORTIE/logcat.txt"
 grep -q "FATAL EXCEPTION" "$SORTIE/logcat.txt" && { echo "ECHEC : plantage après OK"; grep -A25 "FATAL EXCEPTION" "$SORTIE/logcat.txt" | head -60; RESULTAT=1; }
 exit $RESULTAT

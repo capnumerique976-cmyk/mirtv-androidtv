@@ -32,4 +32,6 @@
     <string name="tele_chargement">On cherche les chaînes…</string>
     <string name="tele_vide">Pas de chaîne ici pour le moment.</string>
     <string name="tele_erreur">Impossible de charger les chaînes. Vérifiez internet puis revenez.</string>
+    <string name="qui_regarde_aucun">Aucun profil sur cette box pour le moment.</string>
+    <string name="qui_regarde_se_connecter">Se connecter</string>
 </resources>

@@ -116,19 +116,32 @@ class QuiRegardeFragment : Fragment() {
 		}.launchIn(lifecycleScope)
 	}
 
+	private fun seConnecter(server: Server) {
+		parentFragmentManager.commit {
+			replace<UserLoginFragment>(
+				R.id.content_view, null,
+				createBundle {
+					putString(UserLoginFragment.ARG_SERVER_ID, server.id.toString())
+					putString(UserLoginFragment.ARG_USERNAME, null)
+				},
+			)
+			addToBackStack(null)
+		}
+	}
+
 	@Composable
 	private fun Contenu(server: Server) {
 		val profils by startupViewModel.users.collectAsState()
 		val liste = profils.take(MAX_PROFILS)
 		val dernier = remember { MirtvReglages.dernierProfil(requireContext()) }
-		val demandes = remember(liste.size) { List(liste.size) { FocusRequester() } }
+		// Dernière case : « Se connecter » (le serveur ne publie pas la liste des profils : on se connecte à la main une fois, puis le profil est mémorisé sur la box)
+		val elements: List<User?> = liste + listOf(null)
+		val demandes = remember(elements.size) { List(elements.size) { FocusRequester() } }
 		val libelleParent = stringResource(R.string.profil_parent)
 		BackHandler { } // pas de sortie de l'appli depuis « Qui regarde ? »
 		LaunchedEffect(liste.map { it.id }) {
-			if (liste.isNotEmpty()) {
-				val i = liste.indexOfFirst { it.id.toString() == dernier }.let { if (it >= 0) it else 0 }
-				runCatching { demandes[i].requestFocus() }
-			}
+			val i = liste.indexOfFirst { it.id.toString() == dernier }.let { if (it >= 0) it else 0 }
+			runCatching { demandes[i].requestFocus() }
 		}
 		Box(Modifier.fillMaxSize().background(MirtvCouleurs.Nuit)) {
 			Column(
@@ -143,15 +156,39 @@ class QuiRegardeFragment : Fragment() {
 				) {
 					if (liste.isEmpty()) {
 						BasicText(
-							stringResource(R.string.qui_regarde_attente),
+							stringResource(R.string.qui_regarde_aucun),
 							style = MirtvPolice.style(MirtvTailles.TexteMessage, FontWeight.SemiBold, MirtvCouleurs.Doux),
 						)
+						Spacer(Modifier.height(24.dp))
 					}
-					liste.chunked(3).forEachIndexed { rang, ligne ->
+					elements.chunked(3).forEachIndexed { rang, ligne ->
 						if (rang > 0) Spacer(Modifier.height(32.dp))
 						Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
 							ligne.forEachIndexed { col, user ->
 								val index = rang * 3 + col
+								if (user == null) {
+									MirtvCarte(
+										onClick = { seConnecter(server) },
+										description = stringResource(R.string.qui_regarde_se_connecter),
+										focusRequester = demandes[index],
+										modifier = Modifier.width(150.dp),
+									) {
+										Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
+											Box(
+												Modifier.size(104.dp).background(MirtvCouleurs.Nuit3, RoundedCornerShape(50)),
+												contentAlignment = Alignment.Center,
+											) {
+												BasicText("+", style = MirtvPolice.style(MirtvTailles.TexteAccueilTitre, FontWeight.ExtraBold, MirtvCouleurs.Blanc))
+											}
+											Spacer(Modifier.height(10.dp))
+											BasicText(
+												stringResource(R.string.qui_regarde_se_connecter),
+												style = MirtvPolice.style(MirtvTailles.TexteMessage, FontWeight.Bold, MirtvCouleurs.Blanc),
+											)
+										}
+									}
+									return@forEachIndexed
+								}
 								val enfant = MirtvProfils.estEnfant(user.name)
 								val prenom = MirtvProfils.nomAffiche(user.name, libelleParent)
 								MirtvCarte(
