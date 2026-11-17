@@ -19,7 +19,8 @@ test('l\'écran de connexion n\'affiche pas le mot Jellyfin', async ({ page }) =
   await page.goto('/web/#/login');
   await page.waitForTimeout(6000);
   await expect(page).toHaveTitle('MirTV');
-  const visible = await page.locator('body').innerText();
+  // La seule mention permise est l'avis légal « MirTV n'est pas le projet Jellyfin ».
+  const visible = (await page.locator('body').innerText()).replace(/MirTV n'est pas le projet Jellyfin\./g, '');
   expect(visible).not.toMatch(/jellyfin/i);
   await page.screenshot({ path: 'connexion.png' });
 });
