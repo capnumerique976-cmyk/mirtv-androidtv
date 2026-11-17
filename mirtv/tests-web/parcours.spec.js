@@ -155,6 +155,34 @@ test('connecter un autre écran avec le code affiché sur cet écran', async ({ 
   expect(texte).not.toMatch(/jellyfin/i);
 });
 
+test('bouton « Accueil » partout : grille, bandeau du lecteur, programme, espace enfants', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await expect(page.locator('.barre [data-accueil]')).toBeVisible();
+  await page.locator('[data-cle="c-c1"]').click();
+  await page.locator('.bouton-accueil-video').click();                       // lecteur → accueil
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await expect(page.locator('[data-accueil]')).toHaveCount(0);                // pas de bouton sur l'accueil lui-même
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="c-c1"]').click();
+  await page.keyboard.press('Enter');                                          // bandeau
+  await page.locator('.bandeau [data-accueil]').click();
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await page.locator('[data-cle="films"]').click();
+  await page.getByRole('button', { name: 'Le Baobab Géant' }).click();
+  await page.locator('.barre [data-accueil]').click();                         // fiche vidéo → accueil
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await page.keyboard.press('Escape');                                         // la pile est vidée : Retour → Qui regarde ?
+  await expect(page.getByRole('heading', { name: 'Qui regarde ?' })).toBeVisible();
+  // Espace enfants : « Accueil » ramène à l'accueil enfants, jamais à l'adulte
+  await connexion(page, 'f1-lea');
+  await page.locator('[data-cle="dessins"]').click();
+  await page.locator('.barre [data-accueil]').click();
+  await expect(page.getByRole('heading', { name: 'Que veux-tu regarder ?' })).toBeVisible();
+  await expect(page.locator('.accueil-grille')).toHaveCount(0);
+});
+
 test('Mes favoris vide : message et « Voir la télé en direct »', async ({ page }) => {
   await neuf(page);
   await connexion(page, 'f1-parent');

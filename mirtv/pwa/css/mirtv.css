@@ -190,3 +190,11 @@ input { font: inherit; }
   .bandeau .actions { justify-content: flex-start; }
   .nav:focus { transform: none; }
 }
+
+/* Bouton « Accueil » : dans la barre du haut, dans le bandeau du lecteur, et en haut à gauche des vidéos */
+.bouton-accueil { min-height: 2.6rem; padding: 0.4rem 1.1rem; font-size: 1.05rem; background: var(--nuit2); }
+.enfants .bouton-accueil { background: var(--foret2); }
+.bouton-accueil-video { position: absolute; left: calc(var(--marge-h) + env(safe-area-inset-left)); top: calc(var(--marge-v) + env(safe-area-inset-top)); background: rgba(18,14,54,0.85); font-size: 1.05rem; min-height: 2.6rem; padding: 0.4rem 1.1rem; z-index: 5; }
+.lecteur .nom-chaine { top: calc(var(--marge-v) + 3.6rem); }
+@media (hover: none) and (pointer: coarse) { .lecteur:not(:hover) .bouton-accueil-video { opacity: 0.9; } }
+@media (max-width: 760px) { .barre h1 { font-size: 1.4rem; } .bouton-accueil { padding: 0.4rem 0.7rem; } .heure { display: none; } }

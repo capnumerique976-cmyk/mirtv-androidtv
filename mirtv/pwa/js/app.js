@@ -113,6 +113,7 @@
     internet: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M6 18a26 26 0 0136 0M12 25a17 17 0 0124 0M18 32a8 8 0 0112 0"/><circle cx="24" cy="39" r="2" fill="currentColor"/></svg>',
     message: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"><path d="M8 10h32v22H20l-8 7v-7H8z"/></svg>',
     numero: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M18 8l-4 32M34 8l-4 32M8 18h32M6 30h32"/></svg>',
+    maison: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 22L24 7l18 15"/><path d="M11 19v22h26V19"/><path d="M20 41V29h8v12"/></svg>',
     reglages: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4"><circle cx="24" cy="24" r="7"/><path d="M24 4v7M24 37v7M4 24h7M37 24h7M10 10l5 5M33 33l5 5M10 38l5-5M33 15l5-5"/></svg>'
   };
 
@@ -197,7 +198,8 @@
 
   function focaliser(selecteurOuElement) {
     const e = typeof selecteurOuElement === "string" ? $app.querySelector(selecteurOuElement) : selecteurOuElement;
-    const cible = e || visibles()[0];
+    const v = visibles();
+    const cible = e || v.find(x => !x.closest(".barre")) || v[0];
     if (cible) { cible.focus({ preventScroll: true }); cible.scrollIntoView({ block: "nearest", inline: "nearest" }); }
   }
 
@@ -243,6 +245,8 @@
     ecranCourant = null;
     montrer(estEnfant(profil.nom) ? ecranAccueilEnfants() : ecranAccueil(), true);
   }
+
+  $app.addEventListener("click", e => { if (e.target.closest("[data-accueil]")) { e.preventDefault(); e.stopPropagation(); allerAccueil(); } }, true);
 
   /* ===================== Touches ===================== */
 
@@ -296,9 +300,14 @@
 
   /* ===================== Gabarits communs ===================== */
 
+  const SANS_ACCUEIL = ["accueil", "accueil-enfants", "qui-regarde", "pause", "code-parent", "connexion", "mot-de-passe"];
+  function boutonAccueil() {
+    if (!profil || (ecranCourant && SANS_ACCUEIL.includes(ecranCourant.nom))) return "";
+    return `<button class="bouton bouton-accueil nav" data-accueil data-cle="accueil-btn">${P.maison}${echap(t("bouton_accueil"))}</button>`;
+  }
   function barre(titre, avecProfil = true) {
     const p = avecProfil && profil ? `<span class="pastille-profil nav" tabindex="0" data-cle="pastille" aria-label="${echap(prenom(profil.nom))}">${animal(indexProfil(profil.id))}${echap(prenom(profil.nom))}</span>` : "";
-    return `<header class="barre"><span class="logo" aria-label="MirTV"><span class="logo-mir">Mir</span><span class="logo-tv">TV</span></span><h1>${echap(titre)}</h1><span class="heure" data-heure>${heureCourte(new Date())}</span>${p}</header>`;
+    return `<header class="barre"><span class="logo" aria-label="MirTV"><span class="logo-mir">Mir</span><span class="logo-tv">TV</span></span><h1>${echap(titre)}</h1>${boutonAccueil()}<span class="heure" data-heure>${heureCourte(new Date())}</span>${p}</header>`;
   }
   function indices(liste) { return `<footer class="indices">${liste.map(c => `<span>${echap(t(c))}</span>`).join("")}</footer>`; }
   setInterval(() => document.querySelectorAll("[data-heure]").forEach(h => { h.textContent = heureCourte(new Date()); }), 20000);
@@ -780,6 +789,7 @@
       const bProg = el(`<button class="bouton nav" data-cle="prog">${P.programme}${echap(t("bouton_programme"))}</button>`);
       bProg.addEventListener("click", () => { ferme = true; arreterLecture(); montrer(ecranProgramme(liste), true); });
       actions.appendChild(bProg);
+      actions.appendChild(el(`<button class="bouton nav" data-accueil data-cle="accueil-btn">${P.maison}${echap(t("bouton_accueil"))}</button>`));
       focaliser(bFav);
       const progs = (await programmesChaine(courante.Id, 3)).filter(p => progReel(p, courante));
       const zp = zone.querySelector("[data-progs]");
@@ -830,7 +840,8 @@
         ferme = false;
         const e = el(`<section class="ecran lecteur nav" tabindex="0" data-cle="video" aria-label="${echap(chaine.Name)}">
           <video playsinline autoplay></video><div class="chargement-video"></div>
-          <div class="nom-chaine" hidden></div><div class="bandeau" hidden></div></section>`);
+          <div class="nom-chaine" hidden></div><div class="bandeau" hidden></div>
+          <button class="bouton bouton-accueil-video" data-accueil tabindex="-1">${P.maison}${echap(t("bouton_accueil"))}</button></section>`);
         video = e.querySelector("video");
         video.addEventListener("playing", () => {
           enLecture = true; tentatives = 0; clearTimeout(minuterieDelai);
@@ -845,7 +856,7 @@
         let y0 = null;
         e.addEventListener("pointerdown", ev => { y0 = ev.clientY; });
         e.addEventListener("pointerup", ev => {
-          if (y0 === null || ev.target.closest(".bandeau")) { y0 = null; return; }
+          if (y0 === null || ev.target.closest(".bandeau, [data-accueil]")) { y0 = null; return; }
           const dy = ev.clientY - y0; y0 = null;
           if (Math.abs(dy) > 60) zapper(dy < 0 ? 1 : -1);
           else if (!bandeauOuvert) { if (video.paused) video.play().catch(() => {}); ouvrirBandeau(); }
@@ -1032,7 +1043,8 @@
         return false;
       },
       ouvrir() {
-        const e = el(`<section class="ecran lecteur nav" tabindex="0" data-cle="video" aria-label="${echap(item.Name)}"><video playsinline autoplay controls></video><div class="chargement-video">${echap(t("chargement"))}</div></section>`);
+        const e = el(`<section class="ecran lecteur nav" tabindex="0" data-cle="video" aria-label="${echap(item.Name)}"><video playsinline autoplay controls></video><div class="chargement-video">${echap(t("chargement"))}</div>
+          <button class="bouton bouton-accueil-video" data-accueil tabindex="-1">${P.maison}${echap(t("bouton_accueil"))}</button></section>`);
         video = e.querySelector("video");
         sessionLecture = "web" + Date.now().toString(36);
         // Lecture directe du fichier (vidéos préparées en H.264 à l'avance), jamais de conversion
