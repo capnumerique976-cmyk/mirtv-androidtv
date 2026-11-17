@@ -767,7 +767,7 @@
     if (!logos) return null;
     if (!logos.__n) Object.defineProperty(logos, "__n", { value: Object.fromEntries(Object.entries(logos).map(([k, v]) => [cleLogo(k), v])) });
     const f = logos[c.Name] || logos.__n[cleLogo(c.Name)] || chercherNom(logos, c.Name);
-    return f ? "logos/" + encodeURIComponent(f) : null;
+    return f ? (/^https:\/\//.test(f) ? f : "logos/" + encodeURIComponent(f)) : null; // adresse complète : logo pris chez son hébergeur
   }
   const initiales = nom => (nom || "").replace(/\(.*?\)/g, "").split(/\s+/).filter(Boolean).map(m => m[0]).join("").slice(0, 3).toUpperCase();
   function progression(p) {

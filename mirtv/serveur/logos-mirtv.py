@@ -141,13 +141,19 @@ def main():
                         f.write(data)
                     ident = url.rsplit("/", 1)[-1]
                     break
+        if not fichier and du_registre.get(guide.norm(nom)):
+            # Hébergeur qui refuse le serveur (imgur renvoie une image « indisponible ») : l'appli prend le logo
+            # directement chez lui (les navigateurs des familles y ont accès)
+            resultat[nom] = du_registre[guide.norm(nom)]
+            print(f"  LIEN {nom} ← {resultat[nom][:60]}")
+            continue
         if not fichier:
             sans.append(nom)
             continue
         resultat[nom] = fichier
         print(f"  OK   {nom} ← {ident}")
     for f in os.listdir(DEST):  # ménage : anciens logos qui ne servent plus
-        if f != "logos.json" and f not in resultat.values():
+        if f != "logos.json" and f not in resultat.values():  # (les liens complets ne sont pas des fichiers)
             os.remove(os.path.join(DEST, f))
     with open(os.path.join(DEST, "logos.json"), "w", encoding="utf-8") as f:
         json.dump(resultat, f, ensure_ascii=False, indent=0)
