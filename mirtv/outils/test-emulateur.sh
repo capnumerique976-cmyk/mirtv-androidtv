@@ -18,6 +18,12 @@ adb shell uiautomator dump /sdcard/ecran.xml >/dev/null 2>&1
 adb pull /sdcard/ecran.xml "$SORTIE/ecran.xml" >/dev/null 2>&1
 adb logcat -d > "$SORTIE/logcat.txt"
 
+echo "=== Textes visibles à l'écran (30 s après le lancement) ==="
+grep -o 'text="[^"]\+"' "$SORTIE/ecran.xml" | head -40
+echo "=== Fenêtre au premier plan ==="
+adb shell dumpsys window | grep -m2 -E "mCurrentFocus|mFocusedApp"
+echo "=== Erreurs du journal (extrait) ==="
+grep -E "E AndroidRuntime|E/AndroidRuntime| E .*(mirtv|MirTV|jellyfin)|ANR|Process .* has died" "$SORTIE/logcat.txt" | head -20
 if ! adb shell pidof "$APP" | grep -q '[0-9]'; then
   echo "ECHEC : l'appli ne tourne plus (plantage)"; RESULTAT=1
 fi
