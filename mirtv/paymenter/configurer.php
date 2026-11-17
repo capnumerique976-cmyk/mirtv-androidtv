@@ -35,7 +35,8 @@ $reglage = function (string $cle, $valeur, ?string $type = null, bool $toujours 
 $url = getenv('MIRTV_URL_COMPTE') ?: 'https://compte.mirtv.rahiss.com';
 
 // 1. Réglages généraux
-$reglage('company_name', 'MirTV', null, false);
+$nomActuel = Setting::where('key', 'company_name')->whereNull('settingable_type')->value('value');
+$reglage('company_name', 'MirTV', null, !$nomActuel || strcasecmp($nomActuel, 'Paymenter') === 0); // le nom d'origine « Paymenter » devient « MirTV »
 $reglage('app_url', $url);
 $reglage('timezone', 'Indian/Antananarivo');
 $reglage('app_language', 'fr');
@@ -73,6 +74,10 @@ foreach ([
     'modele_enfant' => 'f901-lova',
     'premier_numero' => 1001,
     'whatsapp' => '',
+    'whatsapp_message' => 'Bonjour MirTV, j\'ai besoin d\'aide.',
+    'aide_langues' => 'français, malgache',
+    'annonce_active' => 0,
+    'annonce_type' => 'info',
 ] as $k => $v) {
     if (!$srv->settings()->where('key', $k)->exists()) {
         $srv->settings()->create(['key' => $k, 'value' => $v]);
@@ -80,7 +85,7 @@ foreach ([
 }
 ExtensionHelper::runMigrations('extensions/Servers/MirTV/database/migrations');
 
-// 5. Produit et formules (prix de TEST, à changer dans l'administration : Produits → MirTV Famille)
+// 5. Produit et formules (prix de TEST, à changer dans le guichet MirTV : « Formules et prix »)
 $cat = Category::firstOrCreate(['slug' => 'mirtv'], ['name' => 'MirTV', 'description' => 'La télé pour toute la famille.']);
 $prod = Product::where('slug', 'mirtv-famille')->first();
 if (!$prod) {

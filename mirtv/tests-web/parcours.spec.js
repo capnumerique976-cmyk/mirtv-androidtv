@@ -453,3 +453,43 @@ test('fin d’abonnement proche : bandeau « Renouveler » pour le parent', asyn
   await page.locator('[data-cle="renouveler"]').click();
   await expect(page.locator('.abo-qr svg')).toBeVisible();
 });
+
+test('guichet : numéro WhatsApp de l\'aide et message à tous les écrans', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  // Rien de réglé : pas de bandeau, aide « numéro bientôt disponible »
+  await expect(page.locator('.annonce')).toBeHidden();
+  await page.locator('[data-cle="aide"]').click();
+  await page.locator('[data-cle="contact"]').click();
+  await expect(page.getByText('Numéro bientôt disponible.')).toBeVisible();
+  // Ravi règle le numéro et un message dans le guichet
+  await page.request.get('/__reglages?whatsapp=261341234567&annonce=' + encodeURIComponent('Travaux ce soir de 23 h à minuit') + '&type=alerte');
+  await page.locator('[data-cle="contact"]').click();
+  const lien = page.locator('a.numero-whatsapp');
+  await expect(lien).toHaveText('+261 34 12 345 67');
+  await expect(lien).toHaveAttribute('href', 'https://wa.me/261341234567?text=Bonjour%20MirTV');
+  await expect(page.locator('.aide-qr svg')).toBeVisible();
+  await expect(page.getByText('On vous répond en français, malgache.', { exact: false })).toBeVisible();
+  await page.screenshot({ path: 'test-results/aide-whatsapp.png' });
+  await page.locator('.barre [data-accueil]').click();
+  await expect(page.locator('.annonce')).toBeVisible();
+  await expect(page.locator('.annonce')).toHaveClass(/annonce-alerte/);
+  await expect(page.locator('.annonce [data-texte]')).toHaveText('Travaux ce soir de 23 h à minuit');
+  await page.screenshot({ path: 'test-results/accueil-annonce.png' });
+  // Message retiré : le bandeau disparaît au prochain passage sur l'accueil
+  await page.request.get('/__reglages?whatsapp=261341234567');
+  await page.locator('[data-cle="aide"]').click();
+  await page.locator('.barre [data-accueil]').click();
+  await expect(page.locator('.annonce')).toBeHidden();
+});
+
+test('abonnement en pause : bouton d\'aide WhatsApp du guichet', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mirtv.abonnements') || '{}').f1?.jeton)).toBeTruthy();
+  await page.request.get('/__abo?statut=en_pause');
+  await page.reload();
+  await expect(page.locator('.abo-pause')).toBeVisible();
+  await expect(page.locator('.abo-pause [data-cle="aide"]')).toHaveAttribute('href', /wa\.me\/261340000000/);
+});

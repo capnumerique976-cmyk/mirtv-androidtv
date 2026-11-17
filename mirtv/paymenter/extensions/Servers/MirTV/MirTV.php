@@ -285,7 +285,8 @@ class MirTV extends Server
             'ecrans' => (int) $f->ecrans,
             'famille' => (int) $f->numero,
             'payer' => rtrim(self::instance()->config('url_publique'), '/') . '/payer/' . $f->jeton_paiement,
-            'whatsapp' => self::instance()->config('whatsapp'),
+            'whatsapp' => Reglages::whatsapp(),
+            'whatsapp_lien' => Reglages::lienWhatsapp(),
         ];
     }
 
@@ -316,6 +317,12 @@ class MirTV extends Server
         }
 
         return self::cors(response()->json(self::etat($f)), $request);
+    }
+
+    /** Réglages publics pour l'appli (numéro WhatsApp de l'aide, message aux écrans). Aucune donnée sensible. */
+    public function reglagesPublics(Request $request)
+    {
+        return self::cors(response()->json(Reglages::publics()), $request);
     }
 
     /** État pour un écran connecté : prouve qui il est avec son jeton Jellyfin. */
@@ -381,7 +388,7 @@ class MirTV extends Server
             return redirect()->away(ExtensionHelper::pay($passerelle, $facture));
         }
 
-        return response(Pages::payer($f, $service, $plans, self::instance()->config('whatsapp'), csrf_token()))->header('Cache-Control', 'no-store');
+        return response(Pages::payer($f, $service, $plans, Reglages::lienWhatsapp(), csrf_token()))->header('Cache-Control', 'no-store');
     }
 
     /** Facture de la prochaine période pour la formule choisie (reprend la facture en attente si c'est la même). */

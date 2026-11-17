@@ -53,6 +53,7 @@ window.MIRTV_TEXTES = {
   "aide_whatsapp": "Écrivez-nous sur WhatsApp",
   "aide_langues": "En français ou en malgache.",
   "aide_scanner": "Ou scannez avec votre téléphone",
+  "aide_langues_serveur": "On vous répond en %1$s.",
   "enfants_titre": "Que veux-tu regarder ?",
   "enfants_dessins_animes": "Dessins animés",
   "enfants_mes_videos": "Mes vidéos",

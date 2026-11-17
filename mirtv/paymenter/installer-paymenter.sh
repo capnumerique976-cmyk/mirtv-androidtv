@@ -47,6 +47,7 @@ sudo cp -r "$ICI/extensions/Servers/MirTV" "$DEST/extensions/Servers/"
 cd "$DEST"
 docker compose pull -q
 docker compose up -d
+docker compose restart paymenter >/dev/null   # nouvelles extensions prises en compte (cache PHP vidé)
 log "attente du démarrage (migrations de la base)…"
 for i in $(seq 1 90); do
   if curl -fsS -o /dev/null -m 5 http://127.0.0.1:8092/ 2>/dev/null; then break; fi
@@ -58,6 +59,7 @@ curl -fsS -o /dev/null -m 5 http://127.0.0.1:8092/ && log "Paymenter répond" ||
 docker compose exec -T paymenter php artisan tinker --execute="require '/app/mirtv/configurer.php';"
 docker compose exec -T paymenter php artisan tinker --execute="require '/app/mirtv/creer-admin.php';"
 docker compose exec -T paymenter php artisan optimize:clear >/dev/null
+docker compose exec -T paymenter php artisan filament:optimize-clear >/dev/null 2>&1 || true
 
 # 6 bis. Garde des écrans : limite propre à chaque famille payante
 for g in /opt/mirtv/garde/garde.py "$HOME/mirtv/scripts/mirtv-garde/garde.py"; do
@@ -90,7 +92,30 @@ BLOC
     log "configuration Caddy refusée : retour à l'ancienne"; sudo cp "$CADDY.avant-compte" "$CADDY"; exit 1
   fi
 fi
+# 7 bis. https://mirtv.rahiss.com/admin → guichet unique MirTV (une seule fois)
+if ! sudo grep -q "guichet-mirtv" "$CADDY"; then
+  sudo cp "$CADDY" "$CADDY.avant-guichet"
+  sudo python3 - "$CADDY" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+repere = "\t# Jellyfin (conteneur"
+bloc = """\t# guichet-mirtv : https://mirtv.rahiss.com/admin ouvre le guichet unique (portail des comptes)
+\t@guichet path /admin /admin/
+\tredir @guichet https://compte.mirtv.rahiss.com/admin/mirtv 302
+
+"""
+assert repere in s, "repère introuvable dans le fichier Caddy MirTV"
+open(p, "w").write(s.replace(repere, bloc + repere, 1))
+PY
+  if sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+    sudo systemctl reload caddy && log "Caddy rechargé (mirtv.rahiss.com/admin → guichet)"
+  else
+    log "configuration Caddy refusée : retour à l'ancienne"; sudo cp "$CADDY.avant-guichet" "$CADDY"
+  fi
+fi
 sleep 3
 curl -s -o /dev/null -w "[paymenter] contrôle : https://compte.mirtv.rahiss.com répond %{http_code}\n" https://compte.mirtv.rahiss.com/ || true
-log "fini. Administration : https://compte.mirtv.rahiss.com/admin  (identifiant : admin@mirtv.rahiss.com)"
+curl -s -o /dev/null -w "[paymenter] contrôle : https://mirtv.rahiss.com/admin renvoie vers %{redirect_url}\n" https://mirtv.rahiss.com/admin || true
+log "fini. Guichet MirTV : https://mirtv.rahiss.com/admin  (identifiant : admin@mirtv.rahiss.com)"
 log "mot de passe : sudo cat $SEC/paymenter_admin_password   (à lancer par Ravi)"

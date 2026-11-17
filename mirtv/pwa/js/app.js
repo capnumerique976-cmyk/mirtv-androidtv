@@ -474,6 +474,28 @@
       return r.ok ? await r.json() : null;
     } catch (e) { return null; }
   }
+  // Réglages publics réglés dans le guichet MirTV : numéro WhatsApp de l'aide, message à tous les écrans
+  function reglagesPublics() { return lire("reglages") || {}; }
+  async function majReglages() {
+    const r = await compte("/mirtv/reglages");
+    if (r) ecrire("reglages", { ...r, maj: Date.now() });
+    return r || reglagesPublics();
+  }
+  function whatsappAide() {
+    const r = reglagesPublics();
+    if (r.whatsapp) return { lisible: r.whatsapp_lisible || "+" + r.whatsapp, lien: r.whatsapp_lien || "https://wa.me/" + r.whatsapp, horaires: r.aide_horaires || "", langues: r.aide_langues || "" };
+    if (CONFIG.whatsapp) return { lisible: CONFIG.whatsapp, lien: "https://wa.me/" + String(CONFIG.whatsapp).replace(/\D/g, ""), horaires: "", langues: "" };
+    return null;
+  }
+  function montrerAnnonce(e) {
+    const a = reglagesPublics().annonce, zone = e.querySelector(".annonce");
+    if (!zone) return;
+    zone.hidden = !(a && a.texte);
+    if (a && a.texte) {
+      zone.className = "annonce annonce-" + (["alerte", "fete"].includes(a.type) ? a.type : "info");
+      zone.querySelector("[data-texte]").textContent = a.texte;
+    }
+  }
   async function majAbonnement(p) {
     const etat = await compte("/mirtv/etat", { headers: { "X-MirTV-Jeton": p.jeton } });
     if (etat && etat.jeton) memoriserAbo(p, etat);
@@ -522,7 +544,7 @@
                   ${etat.famille ? `<p class="petit">${echap(t("abo_numero_famille", etat.famille))}</p>` : ""}
                   <div class="boutons" style="justify-content:flex-start">
                     <a class="bouton principal nav" data-cle="payer" href="${echap(etat.payer)}" target="_blank" rel="noopener">${echap(t("abo_payer_ici"))}</a>
-                    ${etat.whatsapp ? `<a class="bouton nav" data-cle="aide" href="https://wa.me/${echap(String(etat.whatsapp).replace(/\D/g, ""))}" target="_blank" rel="noopener">${echap(t("abo_aide"))}</a>` : ""}
+                    ${(etat.whatsapp_lien || etat.whatsapp || whatsappAide()) ? `<a class="bouton nav" data-cle="aide" href="${echap(etat.whatsapp_lien || (etat.whatsapp ? "https://wa.me/" + String(etat.whatsapp).replace(/\D/g, "") : whatsappAide().lien))}" target="_blank" rel="noopener">${echap(t("abo_aide"))}</a>` : ""}
                     <button class="bouton nav" data-cle="profils">${echap(t("qui_regarde_titre"))}</button></div></div></div></section>`);
         if (enfant) e.querySelector('[data-cle="sortir"]').addEventListener("click", sortirEspaceEnfants);
         else e.querySelector('[data-cle="profils"]').addEventListener("click", () => montrer(ecranQuiRegarde(), true));
@@ -817,6 +839,7 @@
       fermer() { minuteries.forEach(m => m && clearInterval(m)); },
       ouvrir() {
         const e = el(`<section class="ecran ambiance">${barre(t("accueil_titre"))}
+          <div class="annonce" hidden role="status"><span class="annonce-point"></span><span data-texte></span></div>
           <div class="accueil-grille v2">
             ${tuileImage("tele", t("tuile_tele"), t("tuile_tele_sous_titre"), P.tele, "var(--mangue)", "art-tele", true)}
             ${tuileImage("reprendre", t("tuile_reprendre"), "", P.reprendre, "var(--corail)", "art-reprendre")}
@@ -847,6 +870,10 @@
       },
       async enrichir(e) {
         const tuile = cle => e.querySelector(`[data-cle="${cle}"]`);
+        // Message à tous les écrans (guichet MirTV) : tout de suite depuis la mémoire, puis à jour toutes les 5 min
+        montrerAnnonce(e);
+        majReglages().then(() => { if (e.isConnected) montrerAnnonce(e); });
+        minuteries.push(setInterval(() => majReglages().then(() => { if (e.isConnected) montrerAnnonce(e); }), 300000));
         // Fin d'abonnement proche (3 jours) : petit bandeau pour le parent, sans déplacer les tuiles
         const abo = aboMemo(profil);
         const reste = joursRestants(abo);
@@ -1575,14 +1602,20 @@
         e.querySelector('[data-cle="connecter"]').addEventListener("click", () => montrer(ecranConnecterEcran()));
         const rep = e.querySelector("[data-reponse]");
         e.querySelector('[data-cle="image"]').addEventListener("click", async () => {
+          rep.dataset.vue = "";
           rep.textContent = t("chargement");
           try { await api("/System/Ping", { jeton: null }); rep.textContent = t("aide_image_ok"); }
           catch (err) { rep.textContent = t("pas_internet_titre") + " " + t("aide_image_consigne"); }
         });
-        e.querySelector('[data-cle="contact"]').addEventListener("click", () => {
-          rep.textContent = CONFIG.whatsapp ? `${t("aide_whatsapp")} ${CONFIG.whatsapp}. ${t("aide_langues")}` : `${t("aide_whatsapp")} ${t("aide_numero_bientot")}`;
-        });
-        e.querySelector('[data-cle="numero"]').addEventListener("click", () => { rep.textContent = t("numero_ecran", numeroEcran()); });
+        const contact = () => {
+          rep.dataset.vue = "contact";
+          const w = whatsappAide();
+          if (!w) { rep.textContent = `${t("aide_whatsapp")} ${t("aide_numero_bientot")}`; return; }
+          const details = [w.horaires, w.langues ? t("aide_langues_serveur", w.langues) : t("aide_langues")].filter(Boolean).join(" · ");
+          rep.innerHTML = `<span class="aide-whatsapp"><span class="aide-qr">${qr(w.lien)}</span><span>${echap(t("aide_whatsapp"))}<br><a class="numero-whatsapp" href="${echap(w.lien)}" target="_blank" rel="noopener">${echap(w.lisible)}</a><br><small>${echap(details)}</small><br><small>${echap(t("aide_scanner"))}</small></span></span>`;
+        };
+        e.querySelector('[data-cle="contact"]').addEventListener("click", () => { contact(); majReglages().then(() => { if (e.isConnected && rep.dataset.vue === "contact") contact(); }); });
+        e.querySelector('[data-cle="numero"]').addEventListener("click", () => { rep.dataset.vue = ""; rep.textContent = t("numero_ecran", numeroEcran()); });
         $app.appendChild(e);
       }
     };
@@ -1857,6 +1890,7 @@
     viderPile();
     ecranCourant = null;
     if (!navigator.onLine) return montrer(ecranPasInternet(), true);
+    majReglages(); // en arrière-plan : numéro WhatsApp de l'aide, message aux écrans
     // Retour dans l'appli : un enfant retrouve son espace (pas « Qui regarde ? »)
     const ouvert = lire("ouvert");
     const p = ouvert && profils().find(x => x.id === ouvert);

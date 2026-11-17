@@ -29,7 +29,8 @@ class Pages
             $nom = e($p->name);
             $choix .= "<label class=\"formule\"><input type=\"radio\" name=\"formule\" value=\"{$p->id}\" {$coche}><span><b>{$nom}</b><i>{$montant} Ar</i></span></label>";
         }
-        $aide = $whatsapp ? '<a class="bouton gris" href="https://wa.me/' . e(preg_replace('/\D/', '', $whatsapp)) . '">Aide sur WhatsApp</a>' : '';
+        $lien = $whatsapp ? (str_starts_with($whatsapp, 'http') ? $whatsapp : 'https://wa.me/' . preg_replace('/\D/', '', $whatsapp)) : '';
+        $aide = $lien ? '<a class="bouton gris" href="' . e($lien) . '" target="_blank" rel="noopener">Aide sur WhatsApp</a>' : '';
         $c = e($csrf);
 
         return <<<HTML

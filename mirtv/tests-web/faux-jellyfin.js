@@ -47,6 +47,8 @@ function servirSource(p, res) {
 }
 let qcPolls = 0;
 const abo = { statut: "actif", jours: 20 };
+// Réglages publics du faux guichet (numéro WhatsApp, message aux écrans)
+const reglages = { whatsapp: "", annonce: null };
 const JETON_FAMILLE = "a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6";
 
 function json(res, code, obj) {
@@ -93,6 +95,12 @@ const serveur = http.createServer((req, res) => {
     if (p === "/__appels") return json(res, 200, appels);
     // Faux portail des comptes (Paymenter) : état de l'abonnement de la famille 1, pause, code d'activation
     if (p === "/__abo") { abo.statut = url.searchParams.get("statut") || "actif"; abo.jours = Number(url.searchParams.get("jours") || 20); return json(res, 200, abo); }
+    if (p === "/__reglages") { reglages.whatsapp = url.searchParams.get("whatsapp") || ""; const a = url.searchParams.get("annonce"); reglages.annonce = a ? { texte: a, type: url.searchParams.get("type") || "info" } : null; return json(res, 200, reglages); }
+    if (p === "/compte/mirtv/reglages") {
+      const w = reglages.whatsapp;
+      return json(res, 200, { whatsapp: w, whatsapp_lisible: w ? "+261 34 12 345 67" : "", whatsapp_lien: w ? "https://wa.me/" + w + "?text=Bonjour%20MirTV" : "",
+        aide_horaires: w ? "Tous les jours de 8 h à 20 h" : "", aide_langues: w ? "français, malgache" : "", email_aide: "", annonce: reglages.annonce });
+    }
     if (p.startsWith("/compte/")) {
       const etat = { statut: abo.statut, fin: new Date(Date.now() + abo.jours * 86400000).toISOString(), formule: "Mois (TEST)", ecrans: 2, famille: 1,
         payer: `http://${req.headers.host}/compte/payer/${JETON_FAMILLE}`, whatsapp: "261340000000" };
@@ -108,7 +116,7 @@ const serveur = http.createServer((req, res) => {
       }
       return json(res, 404, {});
     }
-    if (p === "/__reset") { abo.statut = "actif"; abo.jours = 20; appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
+    if (p === "/__reset") { abo.statut = "actif"; abo.jours = 20; reglages.whatsapp = ""; reglages.annonce = null; appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
 
     // Connexion
     if (p === "/QuickConnect/Enabled") return json(res, 200, true);

@@ -12,7 +12,8 @@ Route::middleware('web')->group(function () {
 
 // Lu par l'appli MirTV (autre origine : mirtv.rahiss.com) — pas de session, pas de jeton anti-falsification
 Route::get('/abonnement/{jeton}', [MirTV::class, 'abonnement'])->where('jeton', '[a-f0-9]{32}')->middleware('throttle:60,1');
+Route::get('/mirtv/reglages', [MirTV::class, 'reglagesPublics'])->middleware('throttle:120,1');
 Route::get('/mirtv/etat', [MirTV::class, 'etatEcran'])->middleware('throttle:60,1');
 Route::post('/mirtv/activer', [MirTV::class, 'activer'])->withoutMiddleware([PreventRequestForgery::class])->middleware('throttle:10,1');
-Route::options('/mirtv/{chemin}', [MirTV::class, 'options'])->where('chemin', 'etat|activer');
+Route::options('/mirtv/{chemin}', [MirTV::class, 'options'])->where('chemin', 'etat|activer|reglages');
 Route::options('/abonnement/{jeton}', [MirTV::class, 'options']);

@@ -28,9 +28,9 @@ use Illuminate\Support\Str;
  *  - sandbox    : API de test d'Orange (monnaie OUV) ;
  *  - production : vrai argent (seulement quand le compte marchand est ouvert et que Ravi l'a décidé).
  *
- * Les clés ne sont jamais en base ni dans le panneau : elles sont lues dans des fichiers
- * (/run/mirtv/orange_client_id, orange_client_secret, orange_merchant_key), copiés au démarrage
- * du conteneur depuis /etc/mirtv/secrets/paiement/ du serveur.
+ * Les clés sont saisies dans le guichet MirTV (chiffrées en base, jamais réaffichées) ou, à défaut, lues dans
+ * des fichiers (/run/mirtv/orange_client_id, orange_client_secret, orange_merchant_key) copiés au démarrage
+ * du conteneur depuis /etc/mirtv/secrets/paiement/ du serveur (brancher-orange.sh).
  */
 #[ExtensionMeta(
     name: 'Orange Money (MirTV)',
@@ -117,9 +117,21 @@ class OrangeMoney extends Gateway
         return $this->config('mode') ?: 'simulation';
     }
 
-    /** Lit un secret dans un fichier (jamais en base, jamais dans les journaux). */
+    /**
+     * Lit une clé : d'abord celle saisie dans le guichet MirTV (chiffrée en base), sinon le fichier du serveur
+     * (brancher-orange.sh). Jamais affichée, jamais dans les journaux.
+     */
     public static function secret(string $nom): ?string
     {
+        if (str_starts_with($nom, 'orange_')) {
+            try {
+                $v = \App\Models\Gateway::where('extension', 'OrangeMoney')->first()?->settings()->where('key', $nom)->first()?->value;
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            } catch (\Throwable $e) { /* base indisponible : on lit le fichier */
+            }
+        }
         $dossier = getenv('MIRTV_SECRETS_DIR') ?: '/run/mirtv';
         $chemin = rtrim($dossier, '/') . '/' . $nom;
         if (!is_readable($chemin)) {
@@ -158,7 +170,7 @@ class OrangeMoney extends Gateway
         $id = self::secret('orange_client_id');
         $mdp = self::secret('orange_client_secret');
         if (!$id || !$mdp) {
-            throw new Exception('Clés Orange absentes : saisissez-les avec saisir-secret-paiement.sh');
+            throw new Exception('Clés Orange absentes : saisissez-les dans le guichet MirTV (Compte marchand Orange)');
         }
 
         return Cache::remember('mirtv_orange_jeton_' . $this->mode(), 3000, function () use ($id, $mdp) {

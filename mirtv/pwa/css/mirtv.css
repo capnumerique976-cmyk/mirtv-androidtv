@@ -340,3 +340,20 @@ input { font: inherit; }
 }
 a.bouton { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .abo-pause .barre { width: 100%; align-self: stretch; }
+
+/* Message à tous les écrans (réglé dans le guichet MirTV) */
+.annonce { display: flex; align-items: center; gap: 0.8rem; margin: 0 1.6rem 0.6rem; padding: 0.6rem 1.2rem; border-radius: 0.9rem;
+  font-weight: 700; font-size: 1.05rem; background: rgba(76, 201, 255, 0.16); border: 0.1rem solid rgba(76, 201, 255, 0.5); }
+.annonce-point { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--ciel); flex: none; box-shadow: 0 0 0 0.3rem rgba(76, 201, 255, 0.25); }
+.annonce-alerte { background: rgba(255, 159, 28, 0.18); border-color: rgba(255, 159, 28, 0.6); }
+.annonce-alerte .annonce-point { background: var(--mangue); box-shadow: 0 0 0 0.3rem rgba(255, 159, 28, 0.25); }
+.annonce-fete { background: rgba(91, 227, 125, 0.16); border-color: rgba(91, 227, 125, 0.55); }
+.annonce-fete .annonce-point { background: var(--feuille); box-shadow: 0 0 0 0.3rem rgba(91, 227, 125, 0.25); }
+@media (max-width: 760px) { .annonce { margin: 0 0.2rem 0.5rem; font-size: 0.92rem; } }
+
+/* Aide : numéro WhatsApp cliquable + QR code à scanner depuis la télé */
+.aide-whatsapp { display: inline-flex; align-items: center; gap: 1.2rem; text-align: left; }
+.aide-qr { background: #fff; border-radius: 0.7rem; padding: 0.4rem; width: 8rem; height: 8rem; flex: none; }
+.aide-qr svg { width: 100%; height: 100%; display: block; }
+.numero-whatsapp { color: var(--feuille); font-size: 1.5rem; font-weight: 800; text-decoration: none; }
+.aide-whatsapp small { opacity: 0.8; }
