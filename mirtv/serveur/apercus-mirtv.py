@@ -5,7 +5,8 @@ Pour chaque chaîne de MirTV (liste M3U de Dispatcharr), ffmpeg ouvre la source 
 et garde une image (640 px de large). Les images vont dans DEST, avec DEST/apercus.json :
 {"nom de la chaîne": "fichier.jpg"}. L'appli web les lit sur https://mirtv.rahiss.com/tv/apercus/.
 Une chaîne qui ne répond pas garde son image précédente pendant 1 jour.
-Lancé toutes les 20 minutes par mirtv-apercus.timer (installer-apercus.sh).
+Lancé toutes les 20 minutes par mirtv-apercus.timer (installer-apercus.sh). Au-delà de 120 chaînes, une image
+est reprise toutes les heures au plus et chaque passage dure 15 minutes au plus.
 Usage : sudo python3 apercus-mirtv.py [--rapport]
 """
 import concurrent.futures as cf, hashlib, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request
@@ -56,8 +57,29 @@ def main():
         ancien = {}
     liste = chaines()
     resultat, rate = {}, []
+
+    def age(nom):
+        v = ancien.get(nom)
+        p = os.path.join(DEST, v) if v else ""
+        return time.time() - os.path.getmtime(p) if v and os.path.exists(p) else 1e12
+
+    # Beaucoup de chaînes : on ne reprend que les images de plus d'une heure, les plus vieilles d'abord,
+    # et on s'arrête au bout de 15 minutes (le serveur reste disponible pour le reste)
+    rafraichir = 0 if len(liste) <= 120 else 3600
+    fin = time.time() + 15 * 60
+    liste.sort(key=lambda c: -age(c[0]))
+
+    def tache(c):
+        if age(c[0]) < rafraichir or time.time() > fin:
+            return "garder"
+        return prendre(*c)
+
     with cf.ThreadPoolExecutor(max_workers=4) as ex:
-        for (nom, url), data in zip(liste, ex.map(lambda c: prendre(*c), liste)):
+        for (nom, url), data in zip(liste, ex.map(tache, liste)):
+            if data == "garder":
+                if ancien.get(nom) and age(nom) < GARDER:
+                    resultat[nom] = ancien[nom]
+                continue
             if data:
                 fichier = f"{slug(nom)}-{hashlib.sha1(data).hexdigest()[:8]}.jpg"
                 with open(os.path.join(DEST, fichier), "wb") as f:
