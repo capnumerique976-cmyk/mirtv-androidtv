@@ -14,6 +14,21 @@ BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
 echo "=== Manifeste (aapt2) ==="
 "$BT/aapt2" dump badging publie.apk 2>&1 | grep -E "^package|sdkVersion|targetSdk|native-code|uses-feature|application-label:|leanback" | head -20
 "$BT/apksigner" verify -v publie.apk 2>&1 | head -6
+echo "=== Installation comme sur un téléphone (fichier dans Téléchargements, ouvert par l'installateur) ==="
+adb push publie.apk /sdcard/Download/mirtv-test.apk >/dev/null
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/mirtv-test.apk >/dev/null 2>&1
+sleep 4
+ID=$(adb shell content query --uri content://media/external/file --projection _id:_display_name 2>/dev/null | grep "mirtv-test.apk" | sed -n 's/.*_id=\([0-9]*\).*/\1/p' | head -1)
+echo "id média : $ID"
+if [ -n "$ID" ]; then
+  adb shell am start -a android.intent.action.VIEW -t application/vnd.android.package-archive -d "content://media/external/file/$ID" --grant-read-uri-permission 2>&1 | tail -2
+  sleep 6
+  adb shell uiautomator dump /sdcard/i.xml >/dev/null 2>&1; adb pull /sdcard/i.xml sortie-test/installateur.xml >/dev/null 2>&1
+  echo "--- textes de l'installateur :"
+  grep -o 'text="[^"]\+"' sortie-test/installateur.xml | head -15
+  adb exec-out screencap -p > sortie-test/installateur.png
+  adb shell input keyevent KEYCODE_BACK; adb shell input keyevent KEYCODE_BACK
+fi
 echo "=== Installation ==="
 adb install -r publie.apk 2>&1 | tee sortie-test/installation.txt
 grep -q "Success" sortie-test/installation.txt || { echo "ECHEC installation (voir ligne ci-dessus)"; exit 1; }
