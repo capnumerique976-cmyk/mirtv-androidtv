@@ -13,6 +13,9 @@ const UTILISATEURS = {
   "f1-parent": { Id: "u-parent", Name: "f1-parent" },
   "f1-lea": { Id: "u-lea", Name: "f1-lea" },
   "f1-dort": { Id: "u-dort", Name: "f1-dort" },
+  // Comptes sans préfixe de famille : on reconnaît l'enfant à ses droits
+  "parent1": { Id: "u-parent1", Name: "parent1", Policy: { AccessSchedules: [], EnableAllFolders: false, EnabledFolders: ["films", "enfants"] } },
+  "irchad": { Id: "u-irchad", Name: "irchad", Policy: { AccessSchedules: [{ DayOfWeek: "Everyday", StartHour: 0, EndHour: 24 }], EnableAllFolders: false, EnabledFolders: ["enfants"] } },
 };
 const PLAGE_JAMAIS = [{ DayOfWeek: "Everyday", StartHour: 0, EndHour: 0 }];
 
@@ -105,10 +108,10 @@ const serveur = http.createServer((req, res) => {
 
     const u = utilisateurDuJeton(req);
     if (!u) { res.writeHead(401); return res.end(); }
-    const enfant = u.Name !== "f1-parent";
+    const enfant = !["f1-parent", "parent1"].includes(u.Name);
 
     let m;
-    if ((m = /^\/Users\/([^/]+)$/.exec(p))) return json(res, 200, { Id: u.Id, Name: u.Name, Policy: { AccessSchedules: u.Name === "f1-dort" ? PLAGE_JAMAIS : [] } });
+    if ((m = /^\/Users\/([^/]+)$/.exec(p))) return json(res, 200, { Id: u.Id, Name: u.Name, Policy: { AccessSchedules: u.Name === "f1-dort" ? PLAGE_JAMAIS : (u.Policy ? u.Policy.AccessSchedules : []) } });
     if (p === "/LiveTv/Channels") {
       let l = CHAINES;
       if (enfant) l = l.filter(c => c.Tags.includes("onglet-enfants"));

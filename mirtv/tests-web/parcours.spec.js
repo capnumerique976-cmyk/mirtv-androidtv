@@ -339,3 +339,18 @@ test('habillage : images du programme, logos des chaînes, rangée « En direct 
   await expect(page.locator('.lecteur')).toBeVisible();
   await sansMotInterdit(page);
 });
+
+test('comptes sans préfixe de famille : « irchad » va dans l’espace enfants, « parent1 » dans l’accueil adulte', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'Irchad');   // majuscule tapée : acceptée
+  await expect(page.getByRole('heading', { name: 'Que veux-tu regarder ?' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Que veux-tu regarder ?' })).toBeVisible();
+  await page.locator('[data-cle="sortir"]').click();
+  for (const c of '1234') await page.keyboard.press(c);
+  await expect(page.getByRole('heading', { name: 'Qui regarde ?' })).toBeVisible();
+  await expect(page.locator('.pastille-enfants')).toHaveCount(1);
+  await connexion(page, 'parent1');
+  await expect(page.locator('.accueil-grille')).toBeVisible();
+  await expect(page.locator('.ecran.enfants')).toHaveCount(0);
+});

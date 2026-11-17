@@ -60,9 +60,16 @@
 
   const FAMILLE = /^f\d+-(.+)$/i;
   function reste(nom) { const m = FAMILLE.exec((nom || "").trim()); return m ? m[1] : null; }
-  function estEnfant(nom) { const r = reste(nom); return r !== null && r.toLowerCase() !== "parent"; }
-  function estParent(nom) { const r = reste(nom); return r === null ? true : r.toLowerCase() === "parent"; }
+  // Profil sans préfixe « f901- » (ex. « irchad ») : enfant ou parent d'après ses droits, mémorisés à la connexion
+  function infoProfil(nom) { return (profil && profil.nom === nom) ? profil : profils().find(p => p.nom === nom) || null; }
+  function estEnfant(nom) { const r = reste(nom); if (r !== null) return r.toLowerCase() !== "parent"; const p = infoProfil(nom); return !!(p && p.enfant); }
+  function estParent(nom) { return !estEnfant(nom); }
   function famille(nom) { const m = /^(f\d+)-/i.exec((nom || "").trim()); return m ? m[1].toLowerCase() : "sans-famille"; }
+  // Droits d'enfant : plage horaire, ou seulement la bibliothèque Enfants
+  function droitsEnfant(u) {
+    const pol = (u && u.Policy) || {};
+    return (pol.AccessSchedules || []).length > 0 || (pol.EnableAllFolders === false && (pol.EnabledFolders || []).length === 1);
+  }
   function prenom(nom) {
     const r = reste(nom);
     if (r === null) return cap(nom.trim());
@@ -530,7 +537,7 @@
   }
 
   function connecte(res) {
-    const p = { id: res.User.Id, nom: res.User.Name, jeton: res.AccessToken };
+    const p = { id: res.User.Id, nom: res.User.Name, jeton: res.AccessToken, enfant: droitsEnfant(res.User) };
     enregistrerProfil(p);
     viderPile();
     ecranCourant = null;
