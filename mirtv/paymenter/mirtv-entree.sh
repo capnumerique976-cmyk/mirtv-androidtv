@@ -19,5 +19,8 @@ export DB_PASSWORD="$(cat /run/secrets-mirtv/paymenter_db_password)"
 export APP_KEY="$(cat /run/secrets-mirtv/paymenter_app_key)"
 # Le fichier .env de Paymenter est refait à chaque démarrage (dossier temporaire) avec la clé ci-dessus
 rm -f /app/var/.env
+# Droits normaux pour la suite (sinon les fichiers de cache créés par root seraient illisibles par nginx)
+umask 022
+rm -f /app/bootstrap/cache/*.php
 # PHP-FPM garde l'environnement (clear_env = no) : DB_PASSWORD et APP_KEY arrivent jusqu'à l'appli
 exec /bin/ash /app/.github/docker/entrypoint.sh "$@"
