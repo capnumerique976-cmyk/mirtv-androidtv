@@ -17,8 +17,13 @@ chmod 400 /run/mirtv/* 2>/dev/null || true
 # Mot de passe de la base et clé de l'appli : depuis les fichiers, jamais écrits dans le compose
 export DB_PASSWORD="$(cat /run/secrets-mirtv/paymenter_db_password)"
 export APP_KEY="$(cat /run/secrets-mirtv/paymenter_app_key)"
-# Le fichier .env de Paymenter est refait à chaque démarrage (dossier temporaire) avec la clé ci-dessus
-rm -f /app/var/.env
+# Le fichier .env (dossier temporaire en mémoire, jamais sur le disque du serveur) est refait à chaque
+# démarrage avec la clé et le mot de passe de la base : ainsi les tâches planifiées (cron) et les
+# commandes « docker compose exec … php artisan » y ont accès aussi.
+mkdir -p /app/var
+printf 'APP_KEY=%s\nDB_PASSWORD=%s\n' "$APP_KEY" "$DB_PASSWORD" > /app/var/.env
+chown root:nginx /app/var/.env
+chmod 640 /app/var/.env
 # Droits normaux pour la suite (sinon les fichiers de cache créés par root seraient illisibles par nginx)
 umask 022
 rm -f /app/bootstrap/cache/*.php
