@@ -599,7 +599,7 @@
   function carteChaine(c, i, cle) {
     const couleur = COULEURS_LOGO[i % COULEURS_LOGO.length];
     const img = c.ImageTags && c.ImageTags.Primary ? `<img src="${urlImage(c.Id, "Primary", 160)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="grand-numero">${echap(c.ChannelNumber || (c.Name || "").split(/\s+/).map(m => m[0]).join("").slice(0, 3).toUpperCase())}</span>`;
-    const prog = c.CurrentProgram && c.CurrentProgram.Name ? t("chaine_maintenant", c.CurrentProgram.Name) : "";
+    const prog = progReel(c.CurrentProgram, c) ? t("chaine_maintenant", c.CurrentProgram.Name) : "";
     return el(`<button class="carte-chaine nav" data-cle="${cle}" aria-label="${echap(c.Name)}">
       <span class="zone-logo" style="background:${couleur}">${c.ChannelNumber && c.ImageTags && c.ImageTags.Primary ? `<span class="numero">${echap(c.ChannelNumber)}</span>` : ""}${img}</span>
       <span class="nom">${echap(c.Name)}</span><span class="maintenant">${echap(prog)}</span></button>`);
@@ -781,7 +781,7 @@
       bProg.addEventListener("click", () => { ferme = true; arreterLecture(); montrer(ecranProgramme(liste), true); });
       actions.appendChild(bProg);
       focaliser(bFav);
-      const progs = await programmesChaine(courante.Id, 3);
+      const progs = (await programmesChaine(courante.Id, 3)).filter(p => progReel(p, courante));
       const zp = zone.querySelector("[data-progs]");
       if (!zp) return;
       const now = heureServeur();
@@ -867,6 +867,9 @@
     rendre(ecranCourant);
   }
 
+  // Sans guide, le serveur invente un « programme » qui porte le nom de la chaîne : on l'ignore.
+  const progReel = (p, c) => p && p.Name && c && p.Name.trim().toLowerCase() !== (c.Name || "").trim().toLowerCase();
+
   async function programmesChaine(id, limite) {
     try {
       const now = heureServeur().toISOString();
@@ -896,7 +899,7 @@
         zone.innerHTML = "";
         const soir = new Date(now); soir.setHours(19, 0, 0, 0);
         chaines.forEach((c, i) => {
-          const pc = progs.filter(p => p.ChannelId === c.Id);
+          const pc = progs.filter(p => p.ChannelId === c.Id && progReel(p, c));
           const actuel = pc.find(p => new Date(p.StartDate) <= now && new Date(p.EndDate) > now);
           const suivant = pc.find(p => new Date(p.StartDate) > now);
           const ceSoir = pc.find(p => new Date(p.StartDate) >= soir);
