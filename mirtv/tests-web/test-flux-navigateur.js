@@ -82,4 +82,49 @@
     return window.__flux.resultats.filter(r => r.choisi).length;
   };
   window.__tester = tester;
+
+  // 2e essai pour les échecs « réseau » (refus sans code, délai dépassé, coupure des morceaux)
+  window.__reessayer = async function (adresse, parallele = 4) {
+    const candidats = new Map((await (await fetch(adresse, { cache: "no-store" })).json()).map(c => [c.n, c]));
+    const reseau = r => /refusé par le navigateur|délai dépassé|morceaux vidéo refusés|liste trop lente/.test(r || "");
+    const a_refaire = window.__flux.resultats.filter(r => !r.choisi && r.essais.some(e => reseau(e.raison)));
+    let i = 0;
+    async function ouvrier() {
+      while (i < a_refaire.length) {
+        const r = a_refaire[i++];
+        const c = candidats.get(r.n);
+        for (let k = 0; k < c.flux.length; k++) {
+          const e = await tester(c.flux[k].url);
+          r.essais.push(e);
+          if (e.ok) { r.choisi = k + 1; r.deuxieme = true; break; }
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: parallele }, ouvrier));
+    return a_refaire.filter(r => r.choisi).length + " récupérée(s) sur " + a_refaire.length;
+  };
+
+  // Résultats au format lu par « importer-iptv-org.py --resultats » :
+  // 1re ligne = liste JSON des raisons ; puis « n,choisi,2e essai,hauteur,hauteur max,ms,raisons » séparés par « ; »
+  window.__compacter = function () {
+    const codes = [];
+    const code = t => { let k = codes.indexOf(t); if (k < 0) { k = codes.length; codes.push(t); } return k; };
+    const lignes = window.__flux.resultats.map(r => {
+      const bon = r.choisi ? r.essais.find(e => e.ok) : r.essais[r.essais.length - 1];
+      const raisons = r.essais.filter(e => !e.ok && e.raison).map(e => code(e.raison)).join(".");
+      return [r.n, r.choisi, r.deuxieme ? 1 : 0, (bon && bon.hauteur) || 0, (bon && bon.maxHauteur) || 0,
+        (bon && bon.ms) || 0, raisons].join(",");
+    });
+    return JSON.stringify(codes) + "\n" + lignes.join(";");
+  };
+
+  // Même chose, compressé (gzip + base64) pour le recopier par morceaux dans le terminal du serveur
+  window.__compacterGz = async function () {
+    const flux = new Blob([window.__compacter()]).stream().pipeThrough(new CompressionStream("gzip"));
+    const octets = new Uint8Array(await new Response(flux).arrayBuffer());
+    let bin = "";
+    for (const o of octets) bin += String.fromCharCode(o);
+    window.__gz = btoa(bin);
+    return window.__gz.length;
+  };
 })();

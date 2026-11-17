@@ -16,6 +16,10 @@ avec la note « TEST INTERNE iptv-org » : à retirer avant l'ouverture au publi
        ajoute ces chaînes au registre (statut « essai »), avec leur catégorie MirTV et leur logo iptv-org.
      Puis : cd ~/mirtv/scripts/mirtv-admin && sudo python3 -B synchro.py
   python3 importer-iptv-org.py --retirer    retire toutes les chaînes « TEST INTERNE iptv-org »
+
+Import « sport » (toutes langues) : ajouter --sport à --candidats, --ajouter et --resultats.
+  Garde les chaînes de la catégorie iptv-org « sports » (comme la liste categories/sports.m3u), toutes rangées
+  dans la catégorie MirTV « Sport ». Fichiers à part : candidats-sport.json, bilan-sport.json, rapport-sport.html.
 """
 import csv, datetime, json, os, re, shutil, sys, unicodedata, urllib.request
 
@@ -25,6 +29,14 @@ DEST = os.environ.get("MIRTV_IMPORT", "/opt/mirtv/pwa/import")
 COLONNES = ["numero", "nom", "categorie", "enfants", "url_source", "page_officielle", "type",
             "preuve", "date_verification", "verifie_par", "statut", "notes", "logo"]
 MARQUE = "TEST INTERNE iptv-org"
+SPORT = "--sport" in sys.argv
+SUFFIXE = "-sport" if SPORT else ""
+
+
+def fichier(nom):
+    """candidats.json → candidats-sport.json en import « sport »"""
+    base, ext = os.path.splitext(nom)
+    return os.path.join(DEST, base + SUFFIXE + ext)
 
 # Catégories iptv-org → catégories MirTV (la première catégorie connue l'emporte)
 CATEGORIES = {
@@ -112,7 +124,10 @@ def candidats():
         langues = set(c.get("languages") or []) | langues_chaine.get(c["id"], set())
         if c.get("is_nsfw") or c.get("closed"):
             continue
-        if c.get("country") == "FR" or "fra" in langues:
+        if SPORT:
+            if "sports" in (c.get("categories") or []):
+                retenues[c["id"]] = c
+        elif c.get("country") == "FR" or "fra" in langues:
             retenues[c["id"]] = c
     b["chaines_filtrees"] = len(retenues)
 
@@ -151,7 +166,7 @@ def candidats():
         if url in urls or norm(nom) in noms or norm(c["name"]) in noms or cle_langue(nom) in cles:
             b["ecartes_deja_dans_mirtv"] += 1
             continue
-        cat, enfants = categorie(c.get("categories"))
+        cat, enfants = ("Sport", False) if SPORT else categorie(c.get("categories"))
         q = s.get("quality") or ""
         par_chaine.setdefault((ch, nom), []).append({
             "nom": nom, "id": ch, "feed": feed or "", "url": url, "qualite": q,
@@ -170,9 +185,9 @@ def candidats():
     b["flux_candidats"] = sum(len(x["flux"]) for x in liste)
     b["date"] = datetime.datetime.now().isoformat(timespec="minutes")
     os.makedirs(DEST, exist_ok=True)
-    with open(os.path.join(DEST, "candidats.json"), "w", encoding="utf-8") as f:
+    with open(fichier("candidats.json"), "w", encoding="utf-8") as f:
         json.dump(liste, f, ensure_ascii=False)
-    with open(os.path.join(DEST, "bilan.json"), "w", encoding="utf-8") as f:
+    with open(fichier("bilan.json"), "w", encoding="utf-8") as f:
         json.dump(b, f, ensure_ascii=False, indent=1)
     print(json.dumps(b, ensure_ascii=False))
     return 0
@@ -180,7 +195,7 @@ def candidats():
 
 def ajouter(choix):
     """choix : « 3,7:2,12 » = candidat 3 (1er flux), candidat 7 (2e flux), candidat 12."""
-    with open(os.path.join(DEST, "candidats.json"), encoding="utf-8") as f:
+    with open(fichier("candidats.json"), encoding="utf-8") as f:
         liste = {x["n"]: x for x in json.load(f)}
     registre = lire_registre()
     urls = {c["url_source"] for c in registre}
@@ -210,7 +225,7 @@ def ajouter(choix):
         noms.add(norm(x["nom"]))
         numero += 1
         ajout += 1
-    ecrire_registre(registre, "iptv-org")
+    ecrire_registre(registre, "iptv-org" + SUFFIXE)
     print(f"{ajout} chaîne(s) ajoutée(s) (statut essai, numéros 300 et plus). Lancez la synchro.")
     return 0
 
@@ -230,9 +245,9 @@ def resultats(fichier):
     with open(fichier, encoding="utf-8") as f:
         codes = json.loads(f.readline())
         brut = f.read().replace("\n", "")
-    with open(os.path.join(DEST, "candidats.json"), encoding="utf-8") as f:
+    with open(fichier("candidats.json"), encoding="utf-8") as f:
         cand = {x["n"]: x for x in json.load(f)}
-    with open(os.path.join(DEST, "bilan.json"), encoding="utf-8") as f:
+    with open(fichier("bilan.json"), encoding="utf-8") as f:
         bilan = json.load(f)
     lignes = []
     for r in [r for r in brut.split(";") if r]:
@@ -256,10 +271,13 @@ def resultats(fichier):
     pays = Counter(l["flux"][l["choisi"] - 1]["pays"] or "?" for l in ok)
     jour = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
-    md = [f"# Import de test iptv-org — {jour}", "",
+    titre = "Import de test iptv-org — chaînes de sport (toutes langues)" if SPORT else "Import de test iptv-org"
+    filtre = ("catégorie « sports » d'iptv-org, toutes langues, pas pour adultes, chaîne en activité" if SPORT
+              else "pays FR ou langue française, pas pour adultes, chaîne en activité")
+    md = [f"# {titre} — {jour}", "",
           "## Résumé", "",
           f"- Base iptv-org : {bilan['chaines_total']} chaînes, {bilan['flux_total']} flux.",
-          f"- Filtre (pays FR ou langue française, pas pour adultes, chaîne en activité) : **{bilan['chaines_filtrees']} chaînes**, {bilan['flux_des_chaines']} flux.",
+          f"- Filtre ({filtre}) : **{bilan['chaines_filtrees']} chaînes**, {bilan['flux_des_chaines']} flux.",
           f"- Écartés avant le test : {bilan['ecartes_http']} flux en http (non sécurisés), {bilan['ecartes_referrer_user_agent']} flux qui exigent un « referrer » ou un « user-agent » (impossible depuis un navigateur), {bilan['ecartes_deja_dans_mirtv']} déjà dans MirTV.",
           f"- Testées dans un vrai navigateur (Chrome, hls.js comme l'appli, depuis https://mirtv.rahiss.com) : **{len(lignes)} chaînes** ({bilan['flux_candidats']} flux https).",
           f"- **Lisibles : {len(ok)}** (dont {sum(1 for l in ok if l['deuxieme'])} au 2e essai) — **ajoutées à MirTV** en statut « essai » (TEST INTERNE). **Illisibles : {len(ko)}** — écartées.",
@@ -282,7 +300,7 @@ def resultats(fichier):
     md += ["", "Pour retirer toutes ces chaînes de test : `python3 importer-iptv-org.py --retirer` puis la synchro."]
     texte = "\n".join(md) + "\n"
     os.makedirs(DEST, exist_ok=True)
-    with open(os.path.join(DEST, "rapport.md"), "w", encoding="utf-8") as f:
+    with open(fichier("rapport.md"), "w", encoding="utf-8") as f:
         f.write(texte)
     import html as h
     corps = []
@@ -302,16 +320,16 @@ def resultats(fichier):
             corps.append(f"<p>{h.escape(ligne)}</p>")
     page = "\n".join(corps)
     page = re.sub(r"((?:<tr>.*</tr>\n?)+)", lambda m: "<table>" + m.group(1) + "</table>", page)
-    with open(os.path.join(DEST, "rapport.html"), "w", encoding="utf-8") as f:
+    with open(fichier("rapport.html"), "w", encoding="utf-8") as f:
         f.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-                '<title>Rapport import iptv-org — MirTV</title><style>body{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#1b1840}'
+                '<title>' + h.escape(titre) + ' — MirTV</title><style>body{font:15px/1.5 system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#1b1840}'
                 'h1{font-size:24px}h2{font-size:18px;margin-top:28px;border-bottom:2px solid #ff9f1c}table{border-collapse:collapse;width:100%}'
                 'td{border-bottom:1px solid #ddd;padding:4px 8px;font-size:14px}tr:first-child td{font-weight:700;background:#f5f3ff}</style>' + page)
     print(f"Lisibles : {len(ok)} / {len(lignes)} ; catégories : " + ", ".join(f"{c} {n}" for c, n in par_cat.most_common()))
     print("Causes : " + " | ".join(f"{c} : {n}" for c, n in causes.most_common()))
     print(f"Qualité : " + ", ".join(f"{q} {n}" for q, n in qual.most_common()) + f" ; adaptatifs {adaptatifs} ; démarrage médian {mediane} ms")
     print("Pays : " + ", ".join(f"{p} {n}" for p, n in pays.most_common(12)))
-    print("Rapport : https://mirtv.rahiss.com/tv/import/rapport.html")
+    print(f"Rapport : https://mirtv.rahiss.com/tv/import/rapport{SUFFIXE}.html")
     return 0
 
 
