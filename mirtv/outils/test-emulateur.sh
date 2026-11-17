@@ -37,10 +37,15 @@ if [ -f "$SORTIE/ecran.xml" ] && grep -qi "jellyfin" "$SORTIE/ecran.xml"; then
   echo "AVERTISSEMENT : le mot Jellyfin est visible à l'écran"; grep -io '.\{40\}jellyfin.\{40\}' "$SORTIE/ecran.xml" | head -5
 fi
 # Navigation simple : droite, OK, puis nouvelle capture
+echo "=== Éléments sélectionnés (focused) avant OK ==="
+grep -o '<node[^>]*focused="true"[^>]*>' "$SORTIE/ecran.xml" | cut -c1-260 | head -5
+adb shell input keyevent KEYCODE_DPAD_DOWN; sleep 1
 adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 6
 adb exec-out screencap -p > "$SORTIE/03-apres-ok.png"
 adb shell uiautomator dump /sdcard/ecran2.xml >/dev/null 2>&1
 adb pull /sdcard/ecran2.xml "$SORTIE/ecran2.xml" >/dev/null 2>&1
+echo "=== Éléments sélectionnés après OK ==="
+grep -o '<node[^>]*focused="true"[^>]*>' "$SORTIE/ecran2.xml" | cut -c1-260 | head -5
 echo "=== Textes après OK sur « Se connecter » ==="
 grep -o 'text="[^"]\+"' "$SORTIE/ecran2.xml" | head -20
 adb logcat -d > "$SORTIE/logcat.txt"
