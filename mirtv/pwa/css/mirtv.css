@@ -316,3 +316,7 @@ input { font: inherit; }
 .onglets { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
 .onglets::-webkit-scrollbar { display: none; }
 .onglets .onglet { flex: 1 0 auto; min-width: 9rem; white-space: nowrap; scroll-margin: 0 2rem; }
+
+/* Chaîne sans image : grand dessin de sa catégorie, en filigrane */
+.carte-chaine .motif { position: absolute; right: -6%; bottom: -14%; width: 62%; color: rgba(255,255,255,0.22); transform: rotate(-8deg); }
+.carte-chaine .motif svg { width: 100%; height: auto; display: block; }

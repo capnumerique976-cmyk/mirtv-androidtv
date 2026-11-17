@@ -593,10 +593,19 @@
     return promesseLogos;
   }
   const cleLogo = n => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  // Le serveur enlève parfois un nombre au début du nom (« 20 Minutes TV » → « Minutes TV ») : on compare aussi sans lui
+  const sansNombre = k => k.replace(/^\d+/, "");
+  function chercherNom(table, nom) {
+    if (!table) return null;
+    if (table[nom]) return table[nom];
+    const k = cleLogo(nom);
+    const trouve = Object.entries(table).find(([n]) => cleLogo(n) === k || sansNombre(cleLogo(n)) === k);
+    return trouve ? trouve[1] : null;
+  }
   function logoDe(c, logos) {
     if (!logos) return null;
     if (!logos.__n) Object.defineProperty(logos, "__n", { value: Object.fromEntries(Object.entries(logos).map(([k, v]) => [cleLogo(k), v])) });
-    const f = logos[c.Name] || logos.__n[cleLogo(c.Name)];
+    const f = logos[c.Name] || logos.__n[cleLogo(c.Name)] || chercherNom(logos, c.Name);
     return f ? "logos/" + encodeURIComponent(f) : null;
   }
   const initiales = nom => (nom || "").replace(/\(.*?\)/g, "").split(/\s+/).filter(Boolean).map(m => m[0]).join("").slice(0, 3).toUpperCase();
@@ -612,8 +621,27 @@
   function apercuDe(c, logos) {
     const a = logos && logos.__apercus;
     if (!a) return null;
-    const f = a[c.Name] || Object.entries(a).find(([k]) => cleLogo(k) === cleLogo(c.Name))?.[1];
+    const f = chercherNom(a, c.Name);
     return f ? "apercus/" + encodeURIComponent(f) : null;
+  }
+  // Vignette gardée sur cet écran : image prise pendant qu'on regardait la chaîne (chaînes que le serveur ne peut pas lire)
+  const CACHE_VIGNETTES = "mirtv-vignettes";
+  async function vignetteLocale(id) {
+    try {
+      const r = await caches.match(new Request("vignette-locale/" + encodeURIComponent(id)), { cacheName: CACHE_VIGNETTES });
+      return r ? URL.createObjectURL(await r.blob()) : null;
+    } catch (e) { return null; }
+  }
+  function prendreVignette(video, id) {
+    try {
+      if (!video.videoWidth) return;
+      const c = document.createElement("canvas"); c.width = 384; c.height = 216;
+      const x = c.getContext("2d"); x.drawImage(video, 0, 0, 384, 216);
+      const d = x.getImageData(0, 0, 384, 216).data; let somme = 0;
+      for (let k = 0; k < d.length; k += 64) somme += d[k] + d[k + 1] + d[k + 2];
+      if (somme / (d.length / 64) / 3 < 18) return; // image presque noire : on attend la prochaine fois
+      c.toBlob(b => { if (b) caches.open(CACHE_VIGNETTES).then(cc => cc.put(new Request("vignette-locale/" + encodeURIComponent(id)), new Response(b, { headers: { "Content-Type": "image/jpeg" } }))).catch(() => {}); }, "image/jpeg", 0.72);
+    } catch (e) { /* image protégée ou cache indisponible : on garde la vignette dessinée */ }
   }
   // Vignette d'une chaîne : image du programme, sinon image prise sur la chaîne
   const imageChaine = (c, logos, h) => imageProgramme(c, h) || apercuDe(c, logos);
@@ -754,6 +782,23 @@
     const tag = l.filter(c => (c.Tags || []).includes("onglet-enfants"));
     return tag.length ? tag : l; // côté serveur, le profil enfant ne reçoit déjà que les chaînes permises
   }
+  // Dessin de catégorie (dessins originaux) pour une chaîne sans image
+  const MOTIFS = {
+    "onglet-infos": '<path d="M8 10h26v28H12a4 4 0 0 1-4-4z"/><path d="M34 18h6v16a4 4 0 0 1-8 0"/><path d="M14 17h14M14 24h14M14 31h9"/>',
+    "onglet-cinema": '<rect x="6" y="18" width="36" height="22" rx="3"/><path d="M6 18l4-9 32 4-1 5"/><path d="M15 10l-2 7M24 11l-2 7M33 12l-2 6"/>',
+    "onglet-series": '<rect x="5" y="11" width="38" height="25" rx="4"/><path d="M20 18l9 5-9 5z"/><path d="M15 42h18"/>',
+    "onglet-divertissement": '<path d="M24 5l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z"/>',
+    "onglet-sport": '<circle cx="24" cy="24" r="17"/><path d="M24 15l7 5-3 8h-8l-3-8z"/><path d="M24 7v8M38 18l-7 2M33 37l-5-9M15 37l5-9M10 18l7 2"/>',
+    "onglet-musique": '<path d="M18 36V10l20-4v26"/><circle cx="13" cy="36" r="5"/><circle cx="33" cy="32" r="5"/>',
+    "onglet-decouverte": '<circle cx="24" cy="24" r="17"/><path d="M31 17l-4 10-10 4 4-10z"/>',
+    "onglet-animes": '<path d="M24 6l3 8 8 3-8 3-3 8-3-8-8-3 8-3z"/><path d="M36 28l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>',
+    "onglet-culture": '<path d="M8 8h16v14a8 8 0 0 1-16 0z"/><path d="M24 18h16v14a8 8 0 0 1-16 0"/><path d="M12 15h2M18 15h2M29 25h2M35 25h2M13 25c2 2 4 2 6 0M29 35c2-2 4-2 6 0"/>',
+    "onglet-enfants": '<circle cx="24" cy="26" r="14"/><circle cx="13" cy="12" r="5"/><circle cx="35" cy="12" r="5"/><path d="M19 30c3 3 7 3 10 0"/><path d="M19 23h.01M29 23h.01"/>'
+  };
+  function motifCategorie(c) {
+    const o = (c.Tags || []).find(x => MOTIFS[x]) || "onglet-infos";
+    return `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MOTIFS[o]}</svg>`;
+  }
   // Logo clair (texte blanc) : plaque sombre ; logo foncé : plaque blanche
   const luminanceLogos = new Map();
   function teinteLogo(img, cible) {
@@ -780,7 +825,7 @@
     const pct = p ? progression(p) : null;
     const marque = logo ? `<img src="${logo}" alt="" loading="lazy" data-initiales="${echap(initiales(c.Name))}">` : `<b>${echap(initiales(c.Name))}</b>`;
     const b = el(`<button class="carte-chaine nav ${visuel ? "avec-visuel" : "sans-visuel"}" data-cle="${cle}" ${visuel ? `data-fond="${visuel}"` : ""} aria-label="${echap(c.Name)}" style="--teinte:${couleur}">
-      <span class="visuel">${visuel ? `<img src="${visuel}" alt="" loading="lazy">` : ""}</span>
+      <span class="visuel">${visuel ? `<img src="${visuel}" alt="" loading="lazy">` : `<span class="motif">${motifCategorie(c)}</span>`}</span>
       <span class="plaque-logo">${marque}</span>
       <span class="badge-direct">${echap(t("badge_direct"))}</span>
       <span class="infos"><span class="nom">${echap(c.Name)}</span>${p ? `<span class="maintenant">${echap(p.Name)}</span>` : ""}</span>
@@ -790,6 +835,12 @@
     if (v) v.addEventListener("error", () => { b.classList.replace("avec-visuel", "sans-visuel"); b.removeAttribute("data-fond"); v.remove(); });
     const l = b.querySelector(".plaque-logo img");
     if (l) { l.addEventListener("error", () => { const t2 = document.createElement("b"); t2.textContent = l.dataset.initiales; l.replaceWith(t2); }); teinteLogo(l, l.parentElement); }
+    if (!visuel) vignetteLocale(c.Id).then(u => {
+      if (!u || !b.classList.contains("sans-visuel")) return;
+      b.querySelector(".visuel").innerHTML = `<img src="${u}" alt="">`;
+      b.classList.replace("sans-visuel", "avec-visuel");
+      b.dataset.fond = u;
+    });
     return b;
   }
 
@@ -1061,6 +1112,8 @@
           enLecture = true; tentatives = 0; clearTimeout(minuterieDelai);
           const charge = $app.querySelector(".chargement-video"); if (charge) charge.textContent = "";
           journal("chaîne à l'image en", Math.round(performance.now() - debutChangement), "ms :", courante.Name);
+          const vue = courante;
+          setTimeout(() => { if (!ferme && courante === vue && !video.paused) prendreVignette(video, vue.Id); }, 5000);
         });
         video.addEventListener("error", () => {
           if (enLecture && tentatives < CONFIG.reconnexions) { tentatives++; journal("reconnexion silencieuse", tentatives); setTimeout(() => !ferme && jouer(courante, true), 1500); }

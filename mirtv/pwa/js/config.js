@@ -17,5 +17,5 @@ window.MIRTV_CONFIG = {
   reconnexions: 3,
   // Qualité maximale des chaînes (hauteur d'image) : 720 par défaut, 480 ou 1080 dans Réglages (par écran)
   qualiteMax: 720,
-  version: "web-0.1.15"
+  version: "web-0.1.16"
 };

@@ -382,3 +382,19 @@ test('qualité des chaînes : 720p par défaut, réglable, et adresse mémorisé
   await expect(page.locator('.lecteur video')).toBeAttached();
   await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('mirtv.sources') || '{}')))).toContain('c1');
 });
+
+test('chaîne sans image : dessin de sa catégorie, puis image gardée après l’avoir regardée', async ({ page }) => {
+  await neuf(page);
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="o-onglet-enfants"]').click();
+  const carte = page.locator('[data-cle="c-c6"]');
+  await expect(carte).toHaveClass(/sans-visuel/);
+  await expect(carte.locator('.motif svg')).toBeVisible();
+  await carte.click();
+  await expect.poll(() => page.evaluate(() => document.querySelector('.lecteur video')?.currentTime || 0), { timeout: 15000 }).toBeGreaterThan(1);
+  await page.waitForTimeout(6500);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-cle="c-c6"]')).toHaveClass(/avec-visuel/, { timeout: 5000 });
+  await expect(page.locator('[data-cle="c-c6"] .visuel img')).toHaveAttribute('src', /^blob:/);
+});
