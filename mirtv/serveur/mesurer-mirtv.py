@@ -48,7 +48,14 @@ def main():
     jeton = api.cle_api()
     auth = {"Authorization": f'MediaBrowser Client="MirTV-mesure", Device="serveur", DeviceId="mesure", Version="1", Token="{jeton}"'}
     _, users = api.appel("GET", "/Users", token=jeton)
-    profil = next(u for u in users if not u.get("Policy", {}).get("IsAdministrator") and not u.get("Policy", {}).get("IsDisabled"))
+    # le profil famille qui voit le plus de chaînes (un parent, pas un enfant)
+    candidats = [u for u in users if not u.get("Policy", {}).get("IsAdministrator") and not u.get("Policy", {}).get("IsDisabled")]
+    def nb(u):
+        try:
+            return api.appel("GET", f"/LiveTv/Channels?UserId={u['Id']}&Limit=0", token=jeton)[1].get("TotalRecordCount", 0)
+        except Exception:
+            return 0
+    profil = max(candidats, key=nb)
     uid = profil["Id"]
     j = SITE + "/jellyfin" if os.environ.get("MIRTV_PREFIXE") else SITE
     maintenant = datetime.now(timezone.utc)
