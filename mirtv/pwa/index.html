@@ -13,7 +13,10 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icone-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/lexend_regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/lexend_bold.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/mirtv.css">
+<link rel="prefetch" href="vendor/hls.min.js">
 </head>
 <body>
 <main id="app" aria-live="polite">
@@ -22,7 +25,6 @@
 <noscript>MirTV a besoin de JavaScript.</noscript>
 <script src="js/config.js"></script>
 <script src="js/textes.js"></script>
-<script src="vendor/hls.min.js" defer></script>
 <script src="vendor/qrcode.js" defer></script>
 <script src="js/app.js" defer></script>
 </body>

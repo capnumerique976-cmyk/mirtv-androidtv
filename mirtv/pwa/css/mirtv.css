@@ -1,10 +1,10 @@
 /* MirTV — appli web (télé, ordinateur, téléphone). Valeurs : design/tokens.json.
    Tout est en rem : 1 rem = 24 px sur un écran 1920 × 1080 (tailles du design divisées par 24). */
 
-@font-face { font-family: "Lexend"; src: url("../fonts/lexend_regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Lexend"; src: url("../fonts/lexend_semibold.ttf") format("truetype"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "Lexend"; src: url("../fonts/lexend_bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
-@font-face { font-family: "Lexend"; src: url("../fonts/lexend_extrabold.ttf") format("truetype"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_semibold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Lexend"; src: url("../fonts/lexend_extrabold.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 
 :root {
   --nuit: #120E36; --nuit2: #1F1A52; --nuit3: #2C2670; --nuit-video: #0B0A1F;

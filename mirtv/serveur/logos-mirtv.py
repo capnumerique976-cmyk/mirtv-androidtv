@@ -153,13 +153,21 @@ def main():
         resultat[nom] = fichier
         print(f"  OK   {nom} ← {ident}")
     for f in os.listdir(DEST):  # ménage : anciens logos qui ne servent plus
-        if f != "logos.json" and f not in resultat.values():  # (les liens complets ne sont pas des fichiers)
+        if f not in ("logos.json", "logos-clairs.json") and f not in resultat.values():  # (les liens complets ne sont pas des fichiers)
             os.remove(os.path.join(DEST, f))
     with open(os.path.join(DEST, "logos.json"), "w", encoding="utf-8") as f:
         json.dump(resultat, f, ensure_ascii=False, indent=0)
     for nom in sans:
         print(f"  ---  {nom}")
     print(f"Logos : {len(resultat)} sur {len(chaines)} dans {DEST}")
+    try:  # logos plus légers + couleur de plaque calculée ici (optimiser-logos.py)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("optimiser_logos", os.path.join(os.path.dirname(os.path.abspath(__file__)), "optimiser-logos.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.optimiser(DEST)
+    except Exception as e:
+        print(f"  allègement des logos impossible : {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

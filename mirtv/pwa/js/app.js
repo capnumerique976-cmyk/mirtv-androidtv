@@ -162,6 +162,22 @@
     return type.includes("json") ? r.json() : r.text();
   }
 
+  // Lecteur vidéo HLS (610 Ko) : chargé seulement quand il faut, ou en avance quand l'appli ne fait rien
+  let promesseHls = null;
+  function chargerHls() {
+    if (window.Hls) return Promise.resolve(window.Hls);
+    if (!promesseHls) {
+      promesseHls = new Promise((ok, ko) => {
+        const sc = document.createElement("script");
+        sc.src = "vendor/hls.min.js"; sc.async = true;
+        sc.onload = () => ok(window.Hls); sc.onerror = () => { promesseHls = null; ko(new Error("lecteur vidéo indisponible")); };
+        document.head.appendChild(sc);
+      });
+    }
+    return promesseHls;
+  }
+  function plusTard(f) { (window.requestIdleCallback || (g => setTimeout(g, 1200)))(() => { try { f(); } catch (e) { journal(e); } }); }
+
   function urlImage(id, type = "Primary", hauteur = 480) {
     return `${CONFIG.serveur}/Items/${id}/Images/${type}?maxHeight=${hauteur}&quality=85`;
   }
@@ -742,12 +758,13 @@
   });
 
   // Logos des chaînes (copiés sur notre serveur par mirtv/serveur/logos-mirtv.py)
-  let promesseLogos = null;
+  let promesseLogos = null, logosClairs = null;
   function chargerLogos() {
     if (!promesseLogos) {
       const json = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
       // logos des chaînes + aperçus (image prise sur la chaîne il y a quelques minutes, apercus-mirtv.py)
-      promesseLogos = Promise.all([json("logos/logos.json"), json("apercus/apercus.json")]).then(([logos, apercus]) => {
+      promesseLogos = Promise.all([json("logos/logos.json"), json("apercus/apercus.json"), json("logos/logos-clairs.json")]).then(([logos, apercus, clairs]) => {
+        if (Array.isArray(clairs)) logosClairs = new Set(clairs);
         Object.defineProperty(logos, "__apercus", { value: apercus || {} });
         return logos;
       });
@@ -886,7 +903,9 @@
           b.querySelector('[data-cle="renouveler"]').addEventListener("click", () => montrer(ecranRenouveler(abo)));
           b.hidden = false;
         }
+        chargerGuide();
         const [chaines, logos] = await Promise.all([chargerChaines().catch(() => []), chargerLogos()]);
+        plusTard(() => chargerHls().catch(() => {}));
         if (!e.isConnected) return;
         // Télé en direct : les programmes en cours se relaient
         const avecImage = chaines.filter(c => imageChaine(c, logos));
@@ -948,13 +967,73 @@
     { etiquette: "onglet-enfants", texte: "onglet_enfants" }];
   const COULEURS_LOGO = ["var(--mangue)", "var(--lagon)", "var(--corail)", "var(--citron)", "var(--lilas)", "var(--feuille)", "var(--ciel)"];
 
-  async function chargerChaines() {
-    const r = await api(`/LiveTv/Channels?UserId=${profil.id}&AddCurrentProgram=true&Fields=Tags&EnableImages=true&SortBy=SortName`);
-    const l = (r && r.Items) || [];
-    const num = c => { const n = parseFloat(c.ChannelNumber || c.Number); return isNaN(n) ? 99999 : n; };
-    l.sort((a, b) => num(a) - num(b) || (a.Name || "").localeCompare(b.Name || ""));
-    return l;
+  // Liste des chaînes : gardée 90 s en mémoire, et une copie sur l'écran (30 min) affichée tout de suite,
+  // puis rafraîchie en fond. Avant : la liste entière (≈ 400 Ko) était redemandée à chaque écran.
+  const memoChaines = { profil: null, t: 0, liste: null, enCours: null };
+  const compacte = c => ({
+    Id: c.Id, Name: c.Name, ChannelNumber: c.ChannelNumber, Number: c.Number, Tags: c.Tags, ImageTags: c.ImageTags,
+    UserData: c.UserData ? { IsFavorite: !!c.UserData.IsFavorite } : undefined,
+    CurrentProgram: c.CurrentProgram ? { Id: c.CurrentProgram.Id, Name: c.CurrentProgram.Name, StartDate: c.CurrentProgram.StartDate,
+      EndDate: c.CurrentProgram.EndDate, ImageTags: c.CurrentProgram.ImageTags } : undefined
+  });
+  function telechargerChaines() {
+    const id = profil && profil.id;
+    if (memoChaines.enCours && memoChaines.profil === id) return memoChaines.enCours;
+    memoChaines.enCours = api(`/LiveTv/Channels?UserId=${id}&AddCurrentProgram=true&Fields=Tags&EnableImages=true&SortBy=SortName`).then(r => {
+      const l = ((r && r.Items) || []).map(compacte);
+      const num = c => { const n = parseFloat(c.ChannelNumber || c.Number); return isNaN(n) ? 99999 : n; };
+      l.sort((a, b) => num(a) - num(b) || (a.Name || "").localeCompare(b.Name || ""));
+      if (profil && profil.id === id) {
+        Object.assign(memoChaines, { profil: id, t: Date.now(), liste: l });
+        ecrire("chaines-" + id, { t: Date.now(), l });
+      }
+      return l;
+    }).finally(() => { memoChaines.enCours = null; });
+    return memoChaines.enCours;
   }
+  async function chargerChaines(frais = false) {
+    const id = profil && profil.id;
+    if (memoChaines.profil !== id) {
+      Object.assign(memoChaines, { profil: id, t: 0, liste: null, enCours: null });
+      const copie = lire("chaines-" + id);
+      if (copie && Array.isArray(copie.l) && copie.l.length) Object.assign(memoChaines, { t: copie.t || 0, liste: copie.l });
+    }
+    const age = Date.now() - memoChaines.t;
+    if (!frais && memoChaines.liste && age < 90 * 1000) return actualiserEnCours(memoChaines.liste);
+    if (!frais && memoChaines.liste && age < 30 * 60 * 1000) {
+      telechargerChaines().catch(e => journal(e)); // en fond : la prochaine ouverture aura la liste fraîche
+      return actualiserEnCours(memoChaines.liste);
+    }
+    return actualiserEnCours(await telechargerChaines());
+  }
+  // Une émission finie dans la copie gardée est remplacée par celle du programme compact (guide/programmes.json)
+  function actualiserEnCours(liste) {
+    const g = guideCharge;
+    if (!g || !g.c) return liste;
+    const s = heureServeur().getTime() / 1000;
+    liste.forEach(c => {
+      const p = c.CurrentProgram;
+      if (p && Date.parse(p.EndDate) / 1000 > s) return;
+      const e = (g.c[c.Id] || []).find(([d, f]) => d <= s && f > s);
+      c.CurrentProgram = e ? { Name: e[2], StartDate: new Date(e[0] * 1000).toISOString(), EndDate: new Date(e[1] * 1000).toISOString() } : undefined;
+    });
+    return liste;
+  }
+  function majFavoriMemo(id, favori) {
+    (memoChaines.liste || []).forEach(c => { if (c.Id === id) c.UserData = Object.assign({}, c.UserData, { IsFavorite: favori }); });
+    if (memoChaines.profil) ecrire("chaines-" + memoChaines.profil, { t: memoChaines.t, l: memoChaines.liste });
+  }
+  // Programme compact préparé par le serveur toutes les 15 min (mirtv/serveur/guide-court.py)
+  let promesseGuide = null, guideT = 0, guideCharge = null;
+  function chargerGuide() {
+    if (!promesseGuide || Date.now() - guideT > 10 * 60 * 1000) {
+      guideT = Date.now();
+      promesseGuide = fetch("guide/programmes.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null))
+        .then(g => { if (g && g.c) guideCharge = g; return guideCharge; }).catch(() => guideCharge);
+    }
+    return promesseGuide;
+  }
+  const emission = e => ({ Name: e[2], StartDate: new Date(e[0] * 1000).toISOString(), EndDate: new Date(e[1] * 1000).toISOString() });
   function chainesEnfants(l) {
     const tag = l.filter(c => (c.Tags || []).includes("onglet-enfants"));
     return tag.length ? tag : l; // côté serveur, le profil enfant ne reçoit déjà que les chaînes permises
@@ -981,6 +1060,8 @@
   function teinteLogo(img, cible) {
     const appliquer = clair => { if (clair) cible.classList.add("plaque-sombre"); };
     if (luminanceLogos.has(img.src)) return appliquer(luminanceLogos.get(img.src));
+    const local = (img.getAttribute("src") || "").match(/^logos\/(.+)$/);
+    if (logosClairs && local) return appliquer(logosClairs.has(decodeURIComponent(local[1])));
     img.addEventListener("load", () => {
       let clair = false;
       try {
@@ -1000,9 +1081,9 @@
     const p = progReel(c.CurrentProgram, c) ? c.CurrentProgram : null;
     const visuel = imageChaine(c, logos);
     const pct = p ? progression(p) : null;
-    const marque = logo ? `<img src="${logo}" alt="" loading="lazy" data-initiales="${echap(initiales(c.Name))}">` : `<b>${echap(initiales(c.Name))}</b>`;
+    const marque = logo ? `<img src="${logo}" alt="" loading="lazy" decoding="async" data-initiales="${echap(initiales(c.Name))}">` : `<b>${echap(initiales(c.Name))}</b>`;
     const b = el(`<button class="carte-chaine nav ${visuel ? "avec-visuel" : "sans-visuel"}" data-cle="${cle}" ${visuel ? `data-fond="${visuel}"` : ""} aria-label="${echap(c.Name)}" style="--teinte:${couleur}">
-      <span class="visuel">${visuel ? `<img src="${visuel}" alt="" loading="lazy">` : `<span class="motif">${motifCategorie(c)}</span>`}</span>
+      <span class="visuel">${visuel ? `<img src="${visuel}" alt="" loading="lazy" decoding="async">` : `<span class="motif">${motifCategorie(c)}</span>`}</span>
       <span class="plaque-logo">${marque}</span>
       <span class="badge-direct">${echap(t("badge_direct"))}</span>
       <span class="infos"><span class="nom">${echap(c.Name)}</span>${p ? `<span class="maintenant">${echap(p.Name)}</span>` : ""}</span>
@@ -1046,11 +1127,14 @@
             grille.appendChild(el(`<p class="message">${echap(t("tele_vide"))}</p>`));
             return;
           }
-          liste.forEach((c, i) => {
-            const b = carteChaine(c, toutes.indexOf(c), "c-" + c.Id, logos);
+          const rang = new Map(toutes.map((c, i) => [c, i]));
+          const lot = document.createDocumentFragment();
+          liste.forEach(c => {
+            const b = carteChaine(c, rang.get(c), "c-" + c.Id, logos);
             b.addEventListener("click", () => montrer(ecranLecteurChaine(c, toutes, false)));
-            grille.appendChild(b);
+            lot.appendChild(b);
           });
+          grille.appendChild(lot);
         };
         presents.forEach(o => {
           const b = el(`<button class="onglet nav ${o.etiquette === ongletActif ? "actif" : ""}" role="tab" data-cle="o-${o.etiquette}" >${echap(t(o.texte))}</button>`);
@@ -1143,6 +1227,10 @@
       }
       if (ferme || courante !== c) return;
       const estHls = /\.m3u8(\?|$)/i.test(adresse) || /m3u8|hls/i.test(adresse);
+      if (estHls && !window.Hls) {
+        try { await chargerHls(); } catch (e) { journal(e); }
+        if (ferme || courante !== c) return;
+      }
       if (estHls && window.Hls && window.Hls.isSupported()) {
         hls = new window.Hls(reglagesHls());
         const h = hls;
@@ -1227,6 +1315,7 @@
           await api(`/Users/${profil.id}/FavoriteItems/${courante.Id}`, { method: favori ? "DELETE" : "POST" });
           favori = !favori;
           courante.UserData = Object.assign({}, courante.UserData, { IsFavorite: favori });
+          majFavoriMemo(courante.Id, favori);
           bFav.innerHTML = P.favoris + echap(t(favori ? "bouton_retirer_favoris" : "bouton_ajouter_favoris"));
         } catch (e) { journal(e); }
       });
@@ -1384,6 +1473,10 @@
   const progReel = (p, c) => p && p.Name && c && p.Name.trim().toLowerCase() !== (c.Name || "").trim().toLowerCase();
 
   async function programmesChaine(id, limite) {
+    const g = await chargerGuide();
+    const s = heureServeur().getTime() / 1000;
+    const l = g && g.c && g.c[id];
+    if (l && l.length) return l.filter(([, f]) => f > s).slice(0, limite).map(emission);
     try {
       const now = heureServeur().toISOString();
       const r = await api(`/LiveTv/Programs?UserId=${profil.id}&ChannelIds=${id}&MinEndDate=${encodeURIComponent(now)}&SortBy=StartDate&Limit=${limite}&EnableImages=false`);
@@ -1401,26 +1494,32 @@
         $app.appendChild(e);
         const zone = e.querySelector("[data-lignes]");
         zone.appendChild(el(`<p class="message">${echap(t("chargement"))}</p>`));
-        const chaines = listeConnue || await chargerChaines();
+        const [chaines, guide] = await Promise.all([listeConnue || chargerChaines(), chargerGuide()]);
         const now = heureServeur();
         const demain = new Date(now.getTime() + 18 * 3600 * 1000);
         let progs = [];
-        try {
+        if (guide && guide.c) {
+          chaines.forEach(c => (guide.c[c.Id] || []).forEach(e => progs.push(Object.assign(emission(e), { ChannelId: c.Id }))));
+        } else try {
           const r = await api(`/LiveTv/Programs?UserId=${profil.id}&MinEndDate=${encodeURIComponent(now.toISOString())}&MaxStartDate=${encodeURIComponent(demain.toISOString())}&SortBy=StartDate&EnableImages=false&Limit=2000`);
           progs = (r && r.Items) || [];
         } catch (err) { journal(err); }
         zone.innerHTML = "";
         const soir = new Date(now); soir.setHours(19, 0, 0, 0);
+        const parChaine = new Map();
+        progs.forEach(p => { if (!parChaine.has(p.ChannelId)) parChaine.set(p.ChannelId, []); parChaine.get(p.ChannelId).push(p); });
+        const lot = document.createDocumentFragment();
         chaines.forEach((c, i) => {
-          const pc = progs.filter(p => p.ChannelId === c.Id && progReel(p, c));
+          const pc = (parChaine.get(c.Id) || []).filter(p => progReel(p, c));
           const actuel = pc.find(p => new Date(p.StartDate) <= now && new Date(p.EndDate) > now);
           const suivant = pc.find(p => new Date(p.StartDate) > now);
           const ceSoir = pc.find(p => new Date(p.StartDate) >= soir);
           const cel = (lib, p) => `<span><span class="etiquette">${echap(lib)}</span>${p ? echap(p.Name) + ` <span class="petit">${echap(heureCourte(new Date(p.StartDate)))}</span>` : echap(t("programme_inconnu"))}</span>`;
           const b = el(`<button class="ligne-programme nav" data-cle="pg-${c.Id}"><span class="nom">${echap(c.Name)}</span>${cel(t("bandeau_maintenant"), actuel)}${cel(t("bandeau_ensuite"), suivant)}${cel(t("programme_ce_soir"), ceSoir)}</button>`);
           b.addEventListener("click", () => montrer(ecranLecteurChaine(c, chaines, false)));
-          zone.appendChild(b);
+          lot.appendChild(b);
         });
+        zone.appendChild(lot);
         if (!chaines.length) zone.appendChild(el(`<p class="message">${echap(t("tele_vide"))}</p>`));
       }
     };

@@ -84,6 +84,15 @@ const serveur = http.createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "image/jpeg" });
       return fs.createReadStream(f).pipe(res);
     }
+    // Programme compact préparé par le serveur (mirtv/serveur/guide-court.py) : mêmes émissions que /LiveTv/Programs
+    if (p === "/tv/guide/programmes.json") {
+      if (reglages.sansGuideCompact) { res.writeHead(404); return res.end(); }
+      const s = d => Math.floor(Date.parse(d) / 1000);
+      const c = {};
+      CHAINES.forEach(ch => { c[ch.Id] = [[s(h(-0.5)), s(h(0.5)), "Programme actuel " + ch.Id], [s(h(0.5)), s(h(1.5)), "Programme suivant " + ch.Id], [s(h(9)), s(h(11)), "Film du soir " + ch.Id]]; });
+      return json(res, 200, { maj: Math.floor(Date.now() / 1000), c });
+    }
+    if (p === "/__guide") { reglages.sansGuideCompact = url.searchParams.get("compact") === "0"; return json(res, 200, {}); }
     if (p === "/tv" ) { res.writeHead(302, { Location: "/tv/" }); return res.end(); }
     if (p.startsWith("/tv/")) {
       const f = path.join(PWA, decodeURIComponent(p.slice(4)) || "index.html");
@@ -116,7 +125,7 @@ const serveur = http.createServer((req, res) => {
       }
       return json(res, 404, {});
     }
-    if (p === "/__reset") { abo.statut = "actif"; abo.jours = 20; reglages.whatsapp = ""; reglages.annonce = null; appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
+    if (p === "/__reset") { reglages.sansGuideCompact = false; abo.statut = "actif"; abo.jours = 20; reglages.whatsapp = ""; reglages.annonce = null; appels.length = 0; qcPolls = 0; CHAINES.forEach(c => { c.UserData.IsFavorite = false; }); VIDEOS.forEach(v => { v.UserData.IsFavorite = false; }); return json(res, 200, {}); }
 
     // Connexion
     if (p === "/QuickConnect/Enabled") return json(res, 200, true);

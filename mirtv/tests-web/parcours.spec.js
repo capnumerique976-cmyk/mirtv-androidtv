@@ -541,3 +541,41 @@ test('lecteur : le bandeau se ferme (bouton ✕, toucher l’image, tout seul ap
   await page.waitForTimeout(8600);
   await expect(bandeau).toBeHidden();
 });
+
+test('rapidité : liste des chaînes demandée une fois, programme compact, lecteur vidéo chargé à la demande', async ({ page }) => {
+  await neuf(page);
+  // la page ne charge plus le lecteur vidéo (610 Ko) au démarrage
+  expect(await page.locator('script[src*="hls"]').count()).toBe(0);
+  await connexion(page, 'f1-parent');
+  await expect(page.locator('[data-cle="tele"]')).toBeFocused();
+  // accueil → télé → programme → accueil → télé : la liste n'est téléchargée qu'une fois (gardée 90 s)
+  await page.locator('[data-cle="tele"]').click();
+  await expect(page.locator('[data-cle="c-c1"]')).toBeVisible();
+  await page.locator('[data-cle="c-c1"]').click();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Voir le programme' }).click();
+  const ligne = page.locator('[data-cle="pg-c1"]');
+  await expect(ligne).toContainText('Programme actuel c1');
+  await expect(ligne).toContainText('Programme suivant c1');
+  await page.locator('.barre [data-accueil]').click();
+  await page.locator('[data-cle="tele"]').click();
+  await expect(page.locator('[data-cle="c-c1"]')).toBeVisible();
+  const a = await appels(page);
+  expect(a.filter(x => x.chemin === '/LiveTv/Channels').length).toBe(1);
+  // le programme vient du fichier compact : plus de grosse demande « toutes les émissions » au serveur télé
+  expect(a.filter(x => x.chemin === '/LiveTv/Programs' && !/ChannelIds=/.test(x.requete)).length).toBe(0);
+  expect(a.some(x => x.chemin === '/tv/guide/programmes.json')).toBe(true);
+  // la chaîne a bien joué : le lecteur vidéo a été chargé quand il le fallait
+  expect(await page.evaluate(() => !!window.Hls)).toBe(true);
+  // sans fichier compact (serveur pas à jour) : l'écran programme marche comme avant
+  await page.request.get('/__guide?compact=0');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Qui regarde ?' })).toBeVisible();
+  await connexion(page, 'f1-parent');
+  await page.locator('[data-cle="tele"]').click();
+  await page.locator('[data-cle="c-c2"]').click();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Voir le programme' }).click();
+  await expect(page.locator('[data-cle="pg-c2"]')).toContainText('Programme actuel c2');
+});

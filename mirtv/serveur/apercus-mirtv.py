@@ -2,7 +2,7 @@
 """MirTV — vignettes des chaînes : une image prise sur chaque chaîne en direct (comme sur Apple TV).
 
 Pour chaque chaîne de MirTV (liste M3U de Dispatcharr), ffmpeg ouvre la source quelques secondes
-et garde une image (640 px de large). Les images vont dans DEST, avec DEST/apercus.json :
+et garde une image (480 px de large, assez pour une vignette et le fond flou). Les images vont dans DEST, avec DEST/apercus.json :
 {"nom de la chaîne": "fichier.jpg"}. L'appli web les lit sur https://mirtv.rahiss.com/tv/apercus/.
 Une chaîne qui ne répond pas garde son image précédente pendant 1 jour.
 Lancé toutes les 20 minutes par mirtv-apercus.timer (installer-apercus.sh). Au-delà de 120 chaînes, une image
@@ -36,7 +36,7 @@ def prendre(nom, url):
         for depart in ("3", "8"):
             cmd = [FFMPEG, "-nostdin", "-loglevel", "error", "-rw_timeout", "15000000",
                    "-user_agent", "Mozilla/5.0 (MirTV)", "-i", url, "-ss", depart, "-frames:v", "1",
-                   "-vf", "scale=640:-2", "-q:v", "5", "-y", sortie]
+                   "-vf", "scale=480:-2", "-q:v", "6", "-y", sortie]
             try:
                 subprocess.run(cmd, timeout=40, capture_output=True)
             except subprocess.TimeoutExpired:
