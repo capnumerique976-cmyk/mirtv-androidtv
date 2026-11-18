@@ -21,7 +21,7 @@ ESSAIS = 3
 def requete(url, entetes=None, compresse=True):
     h = {"User-Agent": "MirTV-mesure/1.0", **(entetes or {})}
     if compresse:
-        h["Accept-Encoding"] = "gzip, br, zstd"
+        h["Accept-Encoding"] = "gzip"
     t0 = time.perf_counter()
     with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=60) as r:
         corps = r.read()
